@@ -6,6 +6,9 @@ import {
   collection,
   serverTimestamp,
   onSnapshot,
+  doc,
+  updateDoc,
+  increment,
 } from "firebase/firestore";
 import {
   SafeAreaView,
@@ -138,33 +141,13 @@ useEffect(() => {
   setTab("feed");
 }
 
-  function reactToPost(postId: string, reaction: ReactionKey) {
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              reactions: {
-                ...post.reactions,
-                [reaction]: post.reactions[reaction] + 1,
-              },
-            }
-          : post
-      )
-    );
+  async function reactToPost(postId: string, reaction: ReactionKey) {
+  const postRef = doc(db, "posts", postId);
 
-    setSelectedPost((current) =>
-      current && current.id === postId
-        ? {
-            ...current,
-            reactions: {
-              ...current.reactions,
-              [reaction]: current.reactions[reaction] + 1,
-            },
-          }
-        : current
-    );
-  }
+  await updateDoc(postRef, {
+    [`reactions.${reaction}`]: increment(1),
+  });
+}
 
   function addComment(postId: string, text: string, anonymous: boolean) {
     const newComment: Comment = {
