@@ -5,6 +5,7 @@ import {
   addDoc,
   collection,
   serverTimestamp,
+  onSnapshot,
 } from "firebase/firestore";
 import {
   SafeAreaView,
@@ -91,6 +92,24 @@ export default function App() {
 
   return unsubscribe;
 }, []);
+
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    collection(db, "posts"),
+    (snapshot) => {
+      const firebasePosts: Post[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Post, "id">),
+      }));
+
+      setPosts(firebasePosts.reverse());
+    }
+  );
+
+  return unsubscribe;
+}, []);
+
+
   async function addPost(text: string, anonymous: boolean, imageUri?: string) {
   const newPost: Post = {
     id: Date.now().toString(),
