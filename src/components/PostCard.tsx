@@ -1,7 +1,9 @@
 import React from "react";
 import { Image, Pressable, Text, View } from "react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
+import { timeAgo } from "../utils/timeAgo";
 
 type PostCardProps = {
   post: Post;
@@ -9,7 +11,25 @@ type PostCardProps = {
   onOpen: () => void;
 };
 
+function PostVideo({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.postImage}
+      allowsFullscreen
+      allowsPictureInPicture
+      nativeControls
+    />
+  );
+}
+
 export function PostCard({ post, onReact, onOpen }: PostCardProps) {
+  const previewComments = post.comments.slice(0, 3);
+
   return (
     <Pressable style={styles.postCard} onPress={onOpen}>
       <View style={styles.postHeader}>
@@ -21,7 +41,9 @@ export function PostCard({ post, onReact, onOpen }: PostCardProps) {
 
         <View style={{ flex: 1 }}>
           <Text style={styles.author}>{post.author}</Text>
-          <Text style={styles.location}>{post.location}</Text>
+          <Text style={styles.location}>
+            {post.location} • {timeAgo(post.createdAt)}
+          </Text>
         </View>
 
         <Text style={styles.more}>•••</Text>
@@ -29,7 +51,11 @@ export function PostCard({ post, onReact, onOpen }: PostCardProps) {
 
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
 
-      {post.imageUri && <Image source={{ uri: post.imageUri }} style={styles.postImage} />}
+      {post.imageUri && post.mediaType === "video" && <PostVideo uri={post.imageUri} />}
+
+      {post.imageUri && post.mediaType !== "video" && (
+        <Image source={{ uri: post.imageUri }} style={styles.postImage} />
+      )}
 
       <View style={styles.reactionRow}>
         {reactionButtons.map((reaction) => (
@@ -45,11 +71,31 @@ export function PostCard({ post, onReact, onOpen }: PostCardProps) {
         ))}
 
         <Pressable style={styles.commentButton} onPress={onOpen}>
-          <Text style={styles.commentButtonText}>
-            💬 Comments {post.comments.length}
-          </Text>
+          <Text style={styles.commentButtonText}>💬 Comments {post.comments.length}</Text>
         </Pressable>
       </View>
+
+      {previewComments.length > 0 && (
+        <View style={{ marginTop: 12 }}>
+          {previewComments.map((comment) => (
+            <View key={comment.id} style={styles.previewCommentCard}>
+              <Text style={styles.commentAuthor}>{comment.author}</Text>
+              <Text style={styles.commentText}>{comment.text}</Text>
+
+              <Text style={styles.previewCommentMeta}>
+                {timeAgo(comment.createdAt)} · ❤️ {comment.likes ?? 0} · 💬{" "}
+                {comment.replies?.length ?? 0} replies
+              </Text>
+            </View>
+          ))}
+
+          {post.comments.length > 3 && (
+            <Text style={styles.viewMoreComments}>
+              View all {post.comments.length} comments
+            </Text>
+          )}
+        </View>
+      )}
     </Pressable>
   );
 }

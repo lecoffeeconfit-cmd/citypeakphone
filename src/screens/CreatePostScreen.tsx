@@ -2,32 +2,43 @@ import React, { useState } from "react";
 import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { styles } from "../styles";
+import type { MediaType } from "../types";
 
 type CreatePostScreenProps = {
-  addPost: (text: string, anonymous: boolean, imageUri?: string) => void;
+  addPost: (
+    text: string,
+    anonymous: boolean,
+    mediaUri?: string,
+    mediaType?: MediaType
+  ) => void;
   selectedArea: string;
 };
 
 export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProps) {
   const [text, setText] = useState("");
   const [anonymous, setAnonymous] = useState(true);
-  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  const [mediaUri, setMediaUri] = useState<string | undefined>(undefined);
+  const [mediaType, setMediaType] = useState<MediaType | undefined>(undefined);
 
-  async function pickImage() {
+  async function pickMedia() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      alert("Permission to access photos is required.");
+      alert("Permission to access photos and videos is required.");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images", "videos"],
       quality: 0.8,
+      videoMaxDuration: 60,
     });
 
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      const asset = result.assets[0];
+
+      setMediaUri(asset.uri);
+      setMediaType(asset.type === "video" ? "video" : "image");
     }
   }
 
@@ -45,13 +56,23 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         onChangeText={setText}
       />
 
-      <Pressable style={styles.secondaryButton} onPress={pickImage}>
+      <Pressable style={styles.secondaryButton} onPress={pickMedia}>
         <Text style={styles.secondaryButtonText}>
-          {imageUri ? "Change Photo" : "Add Photo"}
+          {mediaUri ? "Change Photo / Video" : "Add Photo / Video"}
         </Text>
       </Pressable>
 
-      {imageUri && <Image source={{ uri: imageUri }} style={styles.previewImage} />}
+      {mediaUri && mediaType === "image" && (
+        <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+      )}
+
+      {mediaUri && mediaType === "video" && (
+        <View style={styles.previewImage}>
+          <Text style={{ color: "white", fontWeight: "900", textAlign: "center", marginTop: 95 }}>
+            🎥 Video selected
+          </Text>
+        </View>
+      )}
 
       <View style={styles.switchRow}>
         <View>
@@ -64,10 +85,11 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       <Pressable
         style={styles.primaryButton}
         onPress={() => {
-          if (text.trim() || imageUri) {
-            addPost(text.trim(), anonymous, imageUri);
+          if (text.trim() || mediaUri) {
+            addPost(text.trim(), anonymous, mediaUri, mediaType);
             setText("");
-            setImageUri(undefined);
+            setMediaUri(undefined);
+            setMediaType(undefined);
             setAnonymous(true);
           }
         }}

@@ -8,6 +8,8 @@ import {
   doc,
   increment,
   onSnapshot,
+  orderBy,
+  query,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
@@ -22,7 +24,7 @@ import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { styles } from "./src/styles";
-import type { Comment, Post, ReactionKey, Tab } from "./src/types";
+import type { Comment, MediaType, Post, ReactionKey, Tab } from "./src/types";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
@@ -31,30 +33,7 @@ export default function App() {
   const [username, setUsername] = useState("howie");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
-
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: "1",
-      author: "Anonymous",
-      anonymous: true,
-      text: "Anyone know what’s happening downtown tonight? Hearing helicopters near Pine Ave.",
-      location: "Long Beach",
-      reactions: { fire: 12, heart: 8, laugh: 3, wow: 6 },
-      comments: [
-        { id: "c1", author: "Anonymous", text: "I heard it too near Ocean Blvd." },
-        { id: "c2", author: "@local808", text: "Probably an event by the Pike." },
-      ],
-    },
-    {
-      id: "2",
-      author: "@howie",
-      anonymous: false,
-      text: "Looking for a good coffee shop to work from near the beach. Good WiFi is a must.",
-      location: "Long Beach",
-      reactions: { fire: 5, heart: 14, laugh: 2, wow: 1 },
-      comments: [{ id: "c3", author: "Anonymous", text: "Rose Park Roasters is solid." }],
-    },
-  ]);
+  const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -69,76 +48,74 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "posts"), (snapshot) => {
+    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const firebasePosts: Post[] = snapshot.docs.map((snapDoc) => ({
         id: snapDoc.id,
         ...(snapDoc.data() as Omit<Post, "id">),
       }));
 
-      setPosts(firebasePosts.reverse());
+      setPosts(firebasePosts);
     });
 
     return unsubscribe;
   }, []);
 
-  async function uploadImageToSupabase(uri: string) {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+  async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
+  const response = await fetch(uri);
+  const blob = await response.blob();
 
-    const fileName = `${Date.now()}.jpg`;
+  const extension = mediaType === "video" ? "mp4" : "jpg";
+  const fileName = `${Date.now()}.${extension}`;
 
-    const { error } = await supabase.storage.from("images").upload(fileName, blob);
+  const { error } = await supabase.storage.from("images").upload(fileName, blob, {
+    contentType: mediaType === "video" ? "video/mp4" : "image/jpeg",
+  });
 
-    if (error) {
-      console.log("SUPABASE ERROR:", error);
-      alert(JSON.stringify(error));
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from("images")
-      .getPublicUrl(fileName);
-
-    return publicUrlData.publicUrl;
+  if (error) {
+    console.log("SUPABASE ERROR:", error);
+    alert(JSON.stringify(error));
+    return null;
   }
 
-  async function addPost(text: string, anonymous: boolean, imageUri?: string) {
-    let uploadedImageUrl = "";
+  const { data: publicUrlData } = supabase.storage
+    .from("images")
+    .getPublicUrl(fileName);
 
-    if (imageUri) {
-      const result = await uploadImageToSupabase(imageUri);
+  return publicUrlData.publicUrl;
+}
 
-      if (result) {
-        uploadedImageUrl = result;
-      }
+  async function addPost(
+  text: string,
+  anonymous: boolean,
+  mediaUri?: string,
+  mediaType?: MediaType
+) {
+  let uploadedMediaUrl = "";
+
+  if (mediaUri) {
+    const result = await uploadMediaToSupabase(mediaUri, mediaType);
+
+    if (result) {
+      uploadedMediaUrl = result;
     }
-
-    const newPost: Post = {
-      id: Date.now().toString(),
-      author: anonymous ? "Anonymous" : `@${username}`,
-      anonymous,
-      text,
-      location: selectedArea,
-      imageUri: uploadedImageUrl,
-      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-      comments: [],
-    };
-
-    setPosts([newPost, ...posts]);
-
-    await addDoc(collection(db, "posts"), {
-      author: newPost.author,
-      anonymous: newPost.anonymous,
-      text: newPost.text,
-      location: newPost.location,
-      imageUri: newPost.imageUri || "",
-      reactions: newPost.reactions,
-      comments: newPost.comments,
-      createdAt: serverTimestamp(),
-    });
-
-    setTab("feed");
   }
+
+  await addDoc(collection(db, "posts"), {
+    author: anonymous ? "Anonymous" : `@${username}`,
+    anonymous,
+    text,
+    location: selectedArea,
+    imageUri: uploadedMediaUrl,
+    mediaType: mediaType || "",
+    reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
+    comments: [],
+    createdAt: serverTimestamp(),
+  });
+
+  setTab("feed");
+}
 
   async function reactToPost(postId: string, reaction: ReactionKey) {
     const postRef = doc(db, "posts", postId);
@@ -153,12 +130,70 @@ export default function App() {
       id: Date.now().toString(),
       author: anonymous ? "Anonymous" : `@${username}`,
       text,
+      likes: 0,
+      replies: [],
+      createdAt: Date.now(),
     };
 
     const postRef = doc(db, "posts", postId);
 
     await updateDoc(postRef, {
       comments: arrayUnion(newComment),
+    });
+  }
+
+  async function likeComment(postId: string, commentId: string) {
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) return;
+
+    const updatedComments = targetPost.comments.map((comment) => {
+      if (comment.id !== commentId) return comment;
+
+      return {
+        ...comment,
+        likes: (comment.likes ?? 0) + 1,
+        replies: comment.replies ?? [],
+      };
+    });
+
+    const postRef = doc(db, "posts", postId);
+
+    await updateDoc(postRef, {
+      comments: updatedComments,
+    });
+  }
+
+  async function addReply(
+    postId: string,
+    commentId: string,
+    text: string,
+    anonymous: boolean
+  ) {
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) return;
+
+    const newReply = {
+      id: Date.now().toString(),
+      author: anonymous ? "Anonymous" : `@${username}`,
+      text,
+      likes: 0,
+      createdAt: Date.now(),
+    };
+
+    const updatedComments = targetPost.comments.map((comment) => {
+      if (comment.id !== commentId) return comment;
+
+      return {
+        ...comment,
+        likes: comment.likes ?? 0,
+        replies: [...(comment.replies ?? []), newReply],
+      };
+    });
+
+    const postRef = doc(db, "posts", postId);
+
+    await updateDoc(postRef, {
+      comments: updatedComments,
     });
   }
 
@@ -213,6 +248,8 @@ export default function App() {
         onClose={() => setSelectedPost(null)}
         onReact={reactToPost}
         onAddComment={addComment}
+        onLikeComment={likeComment}
+        onAddReply={addReply}
       />
     </SafeAreaView>
   );

@@ -536,4 +536,48 @@ export const styles = StyleSheet.create({
     color: "white",
     fontWeight: "900",
   },
+
+    previewCommentCard: {
+    backgroundColor: "#111827",
+    borderRadius: 16,
+    padding: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+  },
+
+  previewCommentMeta: {
+    color: "#94A3B8",
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: "700",
+  },
+
+  viewMoreComments: {
+    color: "#38BDF8",
+    fontWeight: "900",
+    marginTop: 10,
+  },
+
+  replyCard: {
+    backgroundColor: "#111827",
+    borderRadius: 14,
+    padding: 10,
+    marginLeft: 18,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+  },
+
+  commentActionRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 8,
+  },
+
+  commentActionText: {
+    color: "#38BDF8",
+    fontWeight: "900",
+    fontSize: 12,
+  },
 });

@@ -2,10 +2,23 @@ export type Tab = "feed" | "search" | "post" | "profile";
 
 export type ReactionKey = "fire" | "heart" | "laugh" | "wow";
 
+export type MediaType = "image" | "video";
+
+export type CommentReply = {
+  id: string;
+  author: string;
+  text: string;
+  likes: number;
+  createdAt?: any;
+};
+
 export type Comment = {
   id: string;
   author: string;
   text: string;
+  likes?: number;
+  replies?: CommentReply[];
+  createdAt?: any;
 };
 
 export type Post = {
@@ -15,6 +28,8 @@ export type Post = {
   text: string;
   location: string;
   imageUri?: string;
+  mediaType?: MediaType;
+  createdAt?: any;
   reactions: Record<ReactionKey, number>;
   comments: Comment[];
 };
