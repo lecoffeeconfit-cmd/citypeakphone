@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { auth, db } from "./firebase";
+import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import {
   SafeAreaView,
   View,
@@ -47,6 +49,7 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [username, setUsername] = useState("howie");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [firebaseReady, setFirebaseReady] = useState(false);
 
   const [posts, setPosts] = useState<Post[]>([
     {
@@ -72,6 +75,17 @@ export default function App() {
     },
   ]);
 
+  useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      await signInAnonymously(auth);
+    }
+
+    setFirebaseReady(true);
+  });
+
+  return unsubscribe;
+}, []);
   function addPost(text: string, anonymous: boolean, imageUri?: string) {
     const newPost: Post = {
       id: Date.now().toString(),
@@ -142,9 +156,13 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.logo}>CityPeak</Text>
-          <Text style={styles.subtitle}>Local anonymous city feeds</Text>
-        </View>
+  <Text style={styles.logo}>CityPeak</Text>
+  <Text style={styles.subtitle}>Local anonymous city feeds</Text>
+
+  <Text style={{ color: "#22C55E", marginTop: 4, fontWeight: "800" }}>
+    {firebaseReady ? "Firebase Connected" : "Connecting Firebase..."}
+  </Text>
+</View>
 
         <Pressable style={styles.headerPill} onPress={() => setTab("search")}>
           <Text style={styles.headerPillText}>{selectedArea}</Text>
