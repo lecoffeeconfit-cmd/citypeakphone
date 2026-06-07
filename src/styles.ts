@@ -580,4 +580,34 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 12,
   },
+
+    feedToggleRow: {
+    flexDirection: "row",
+    backgroundColor: "#0F172A",
+    borderRadius: 999,
+    padding: 5,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+  },
+
+  feedToggleButton: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+
+  feedToggleButtonActive: {
+    backgroundColor: "#2563EB",
+  },
+
+  feedToggleText: {
+    color: "#94A3B8",
+    fontWeight: "900",
+  },
+
+  feedToggleTextActive: {
+    color: "white",
+  },
 });
