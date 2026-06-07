@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import {
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
+import {
   SafeAreaView,
   View,
   Text,
@@ -86,21 +91,33 @@ export default function App() {
 
   return unsubscribe;
 }, []);
-  function addPost(text: string, anonymous: boolean, imageUri?: string) {
-    const newPost: Post = {
-      id: Date.now().toString(),
-      author: anonymous ? "Anonymous" : `@${username}`,
-      anonymous,
-      text,
-      location: selectedArea,
-      imageUri,
-      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-      comments: [],
-    };
+  async function addPost(text: string, anonymous: boolean, imageUri?: string) {
+  const newPost: Post = {
+    id: Date.now().toString(),
+    author: anonymous ? "Anonymous" : `@${username}`,
+    anonymous,
+    text,
+    location: selectedArea,
+    imageUri,
+    reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
+    comments: [],
+  };
 
-    setPosts([newPost, ...posts]);
-    setTab("feed");
-  }
+  setPosts([newPost, ...posts]);
+
+  await addDoc(collection(db, "posts"), {
+    author: newPost.author,
+    anonymous: newPost.anonymous,
+    text: newPost.text,
+    location: newPost.location,
+    imageUri: newPost.imageUri || "",
+    reactions: newPost.reactions,
+    comments: newPost.comments,
+    createdAt: serverTimestamp(),
+  });
+
+  setTab("feed");
+}
 
   function reactToPost(postId: string, reaction: ReactionKey) {
     setPosts((currentPosts) =>
