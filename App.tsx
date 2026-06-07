@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
+import { supabase } from "./supabase";
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import {
   addDoc,
@@ -113,15 +114,46 @@ useEffect(() => {
   return unsubscribe;
 }, []);
 
+async function uploadImageToSupabase(uri: string) {
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  const fileName = `${Date.now()}.jpg`;
+
+  const { data, error } = await supabase.storage
+    .from("images")
+    .upload(fileName, blob);
+
+  if (error) {
+  console.log("SUPABASE ERROR:", error);
+  alert(JSON.stringify(error));
+  return null;
+}
+
+  const { data: publicUrlData } = supabase.storage
+    .from("images")
+    .getPublicUrl(fileName);
+
+  return publicUrlData.publicUrl;
+}
 
   async function addPost(text: string, anonymous: boolean, imageUri?: string) {
-  const newPost: Post = {
+  let uploadedImageUrl = "";
+
+if (imageUri) {
+  const result = await uploadImageToSupabase(imageUri);
+
+  if (result) {
+    uploadedImageUrl = result;
+  }
+}
+    const newPost: Post = {
     id: Date.now().toString(),
     author: anonymous ? "Anonymous" : `@${username}`,
     anonymous,
     text,
     location: selectedArea,
-    imageUri,
+    imageUri: uploadedImageUrl,
     reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
     comments: [],
   };
