@@ -9,6 +9,7 @@ import {
   doc,
   updateDoc,
   increment,
+  arrayUnion,
 } from "firebase/firestore";
 import {
   SafeAreaView,
@@ -149,27 +150,19 @@ useEffect(() => {
   });
 }
 
-  function addComment(postId: string, text: string, anonymous: boolean) {
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: anonymous ? "Anonymous" : `@${username}`,
-      text,
-    };
+  async function addComment(postId: string, text: string, anonymous: boolean) {
+  const newComment: Comment = {
+    id: Date.now().toString(),
+    author: anonymous ? "Anonymous" : `@${username}`,
+    text,
+  };
 
-    setPosts((currentPosts) =>
-      currentPosts.map((post) =>
-        post.id === postId
-          ? { ...post, comments: [...post.comments, newComment] }
-          : post
-      )
-    );
+  const postRef = doc(db, "posts", postId);
 
-    setSelectedPost((current) =>
-      current && current.id === postId
-        ? { ...current, comments: [...current.comments, newComment] }
-        : current
-    );
-  }
+  await updateDoc(postRef, {
+    comments: arrayUnion(newComment),
+  });
+}
 
   return (
     <SafeAreaView style={styles.container}>
