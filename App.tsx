@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, Text, View } from "react-native";
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import {
   addDoc,
   arrayUnion,
   collection,
   doc,
+  getDoc,
   increment,
   onSnapshot,
   orderBy,
@@ -19,6 +20,7 @@ import { supabase } from "./supabase";
 
 import { BottomNav } from "./src/components/BottomNav";
 import { PostDetailsModal } from "./src/components/PostDetailsModal";
+import { AuthScreen } from "./src/screens/AuthScreen";
 import { CreatePostScreen } from "./src/screens/CreatePostScreen";
 import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
@@ -30,24 +32,37 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
   const [search, setSearch] = useState("");
-  const [username, setUsername] = useState("howie");
+  const [username, setUsername] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        await signInAnonymously(auth);
-      }
-
+      setCurrentUser(user);
       setFirebaseReady(true);
+
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUsername(data.username || user.email?.split("@")[0] || "user");
+        } else {
+          setUsername(user.email?.split("@")[0] || "user");
+        }
+      } else {
+        setUsername("");
+      }
     });
 
     return unsubscribe;
   }, []);
 
   useEffect(() => {
+    if (!currentUser) return;
+
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -60,62 +75,66 @@ export default function App() {
     });
 
     return unsubscribe;
-  }, []);
+  }, [currentUser]);
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
-  const response = await fetch(uri);
-  const blob = await response.blob();
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
-  const extension = mediaType === "video" ? "mp4" : "jpg";
-  const fileName = `${Date.now()}.${extension}`;
+    const extension = mediaType === "video" ? "mp4" : "jpg";
+    const fileName = `${Date.now()}.${extension}`;
 
-  const { error } = await supabase.storage.from("images").upload(fileName, blob, {
-    contentType: mediaType === "video" ? "video/mp4" : "image/jpeg",
-  });
+    const { error } = await supabase.storage.from("images").upload(fileName, blob, {
+      contentType: mediaType === "video" ? "video/mp4" : "image/jpeg",
+    });
 
-  if (error) {
-    console.log("SUPABASE ERROR:", error);
-    alert(JSON.stringify(error));
-    return null;
+    if (error) {
+      console.log("SUPABASE ERROR:", error);
+      alert(JSON.stringify(error));
+      return null;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("images")
+      .getPublicUrl(fileName);
+
+    return publicUrlData.publicUrl;
   }
-
-  const { data: publicUrlData } = supabase.storage
-    .from("images")
-    .getPublicUrl(fileName);
-
-  return publicUrlData.publicUrl;
-}
 
   async function addPost(
-  text: string,
-  anonymous: boolean,
-  mediaUri?: string,
-  mediaType?: MediaType
-) {
-  let uploadedMediaUrl = "";
+    text: string,
+    anonymous: boolean,
+    mediaUri?: string,
+    mediaType?: MediaType
+  ) {
+    if (!currentUser) return;
 
-  if (mediaUri) {
-    const result = await uploadMediaToSupabase(mediaUri, mediaType);
+    let uploadedMediaUrl = "";
 
-    if (result) {
-      uploadedMediaUrl = result;
+    if (mediaUri) {
+      const result = await uploadMediaToSupabase(mediaUri, mediaType);
+
+      if (result) {
+        uploadedMediaUrl = result;
+      }
     }
+
+    await addDoc(collection(db, "posts"), {
+      uid: currentUser.uid,
+      username,
+      author: anonymous ? "Anonymous" : `@${username}`,
+      anonymous,
+      text,
+      location: selectedArea,
+      imageUri: uploadedMediaUrl,
+      mediaType: mediaType || "",
+      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
+      comments: [],
+      createdAt: serverTimestamp(),
+    });
+
+    setTab("feed");
   }
-
-  await addDoc(collection(db, "posts"), {
-    author: anonymous ? "Anonymous" : `@${username}`,
-    anonymous,
-    text,
-    location: selectedArea,
-    imageUri: uploadedMediaUrl,
-    mediaType: mediaType || "",
-    reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-    comments: [],
-    createdAt: serverTimestamp(),
-  });
-
-  setTab("feed");
-}
 
   async function reactToPost(postId: string, reaction: ReactionKey) {
     const postRef = doc(db, "posts", postId);
@@ -126,6 +145,8 @@ export default function App() {
   }
 
   async function addComment(postId: string, text: string, anonymous: boolean) {
+    if (!currentUser) return;
+
     const newComment: Comment = {
       id: Date.now().toString(),
       author: anonymous ? "Anonymous" : `@${username}`,
@@ -169,6 +190,8 @@ export default function App() {
     text: string,
     anonymous: boolean
   ) {
+    if (!currentUser) return;
+
     const targetPost = posts.find((post) => post.id === postId);
     if (!targetPost) return;
 
@@ -197,6 +220,25 @@ export default function App() {
     });
   }
 
+  async function handleLogout() {
+    await signOut(auth);
+  }
+
+  if (!firebaseReady) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.screen}>
+          <Text style={styles.logo}>CityPeak</Text>
+          <Text style={styles.subtitle}>Connecting Firebase...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen onAuthSuccess={() => {}} />;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -205,7 +247,7 @@ export default function App() {
           <Text style={styles.subtitle}>Local anonymous city feeds</Text>
 
           <Text style={{ color: "#22C55E", marginTop: 4, fontWeight: "800" }}>
-            {firebaseReady ? "Firebase Connected" : "Connecting Firebase..."}
+            Signed in as @{username}
           </Text>
         </View>
 
@@ -238,7 +280,16 @@ export default function App() {
       )}
 
       {tab === "profile" && (
-        <ProfileScreen username={username} setUsername={setUsername} />
+        <View style={{ flex: 1 }}>
+          <ProfileScreen username={username} setUsername={setUsername} />
+
+          <Pressable
+            style={[styles.secondaryButton, { marginHorizontal: 20 }]}
+            onPress={handleLogout}
+          >
+            <Text style={styles.secondaryButtonText}>Log Out</Text>
+          </Pressable>
+        </View>
       )}
 
       <BottomNav tab={tab} setTab={setTab} />
