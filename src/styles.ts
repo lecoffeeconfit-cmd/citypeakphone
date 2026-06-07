@@ -610,4 +610,24 @@ export const styles = StyleSheet.create({
   feedToggleTextActive: {
     color: "white",
   },
+
+    profilePhoto: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: "#1E293B",
+    marginBottom: 12,
+  },
+
+  profileBioInput: {
+    backgroundColor: "#0F172A",
+    color: "white",
+    minHeight: 110,
+    padding: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    textAlignVertical: "top",
+    marginBottom: 12,
+  },
 });

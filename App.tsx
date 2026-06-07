@@ -12,6 +12,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 
@@ -33,6 +34,8 @@ export default function App() {
   const [selectedArea, setSelectedArea] = useState("Long Beach");
   const [search, setSearch] = useState("");
   const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -48,12 +51,19 @@ export default function App() {
 
         if (userDoc.exists()) {
           const data = userDoc.data();
+
           setUsername(data.username || user.email?.split("@")[0] || "user");
+          setBio(data.bio || "");
+          setPhotoUrl(data.photoUrl || "");
         } else {
           setUsername(user.email?.split("@")[0] || "user");
+          setBio("");
+          setPhotoUrl("");
         }
       } else {
         setUsername("");
+        setBio("");
+        setPhotoUrl("");
       }
     });
 
@@ -99,6 +109,46 @@ export default function App() {
       .getPublicUrl(fileName);
 
     return publicUrlData.publicUrl;
+  }
+
+  async function saveProfile(
+    newUsername: string,
+    newBio: string,
+    imageUri?: string
+  ) {
+    if (!currentUser) return;
+
+    let uploadedPhotoUrl = photoUrl;
+
+    if (imageUri) {
+      const result = await uploadMediaToSupabase(imageUri, "image");
+
+      if (result) {
+        uploadedPhotoUrl = result;
+      }
+    }
+
+    const cleanedUsername =
+      newUsername.trim() || currentUser.email?.split("@")[0] || "user";
+
+    await setDoc(
+      doc(db, "users", currentUser.uid),
+      {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        username: cleanedUsername,
+        bio: newBio.trim(),
+        photoUrl: uploadedPhotoUrl,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    setUsername(cleanedUsername);
+    setBio(newBio.trim());
+    setPhotoUrl(uploadedPhotoUrl);
+
+    alert("Profile saved!");
   }
 
   async function addPost(
@@ -281,7 +331,14 @@ export default function App() {
 
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
-          <ProfileScreen username={username} setUsername={setUsername} />
+          <ProfileScreen
+            username={username}
+            setUsername={setUsername}
+            bio={bio}
+            setBio={setBio}
+            photoUrl={photoUrl}
+            onSaveProfile={saveProfile}
+          />
 
           <Pressable
             style={[styles.secondaryButton, { marginHorizontal: 20 }]}

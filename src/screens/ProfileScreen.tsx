@@ -1,25 +1,70 @@
-import React from "react";
-import { Text, TextInput, View } from "react-native";
+import React, { useState } from "react";
+import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { styles } from "../styles";
 
 type ProfileScreenProps = {
   username: string;
   setUsername: (value: string) => void;
+  bio: string;
+  setBio: (value: string) => void;
+  photoUrl: string;
+  onSaveProfile: (username: string, bio: string, imageUri?: string) => void;
 };
 
-export function ProfileScreen({ username, setUsername }: ProfileScreenProps) {
+export function ProfileScreen({
+  username,
+  setUsername,
+  bio,
+  setBio,
+  photoUrl,
+  onSaveProfile,
+}: ProfileScreenProps) {
+  const [localImageUri, setLocalImageUri] = useState<string | undefined>();
+
+  async function pickProfilePhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      alert("Permission to access photos is required.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (!result.canceled) {
+      setLocalImageUri(result.assets[0].uri);
+    }
+  }
+
+  const displayPhoto = localImageUri || photoUrl;
+
   return (
-    <View style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 130 }}>
       <Text style={styles.screenTitle}>Profile</Text>
 
       <View style={styles.profileCard}>
-        <View style={styles.profileAvatar}>
-          <Text style={styles.profileAvatarText}>{username[0]?.toUpperCase()}</Text>
-        </View>
+        <Pressable onPress={pickProfilePhoto}>
+          {displayPhoto ? (
+            <Image source={{ uri: displayPhoto }} style={styles.profilePhoto} />
+          ) : (
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>
+                {username[0]?.toUpperCase() || "?"}
+              </Text>
+            </View>
+          )}
+        </Pressable>
 
-        <Text style={styles.profileName}>@{username}</Text>
+        <Text style={styles.profileName}>@{username || "username"}</Text>
+
         <Text style={styles.muted}>
-          Used when you choose not to post anonymously.
+          Tap your photo to change it.
         </Text>
 
         <View style={styles.statsRow}>
@@ -48,7 +93,26 @@ export function ProfileScreen({ username, setUsername }: ProfileScreenProps) {
         onChangeText={setUsername}
         placeholder="Username"
         placeholderTextColor="#64748B"
+        autoCapitalize="none"
       />
-    </View>
+
+      <Text style={styles.smallTitle}>Bio</Text>
+
+      <TextInput
+        style={styles.profileBioInput}
+        value={bio}
+        onChangeText={setBio}
+        placeholder="Tell people about yourself..."
+        placeholderTextColor="#64748B"
+        multiline
+      />
+
+      <Pressable
+        style={styles.primaryButton}
+        onPress={() => onSaveProfile(username, bio, localImageUri)}
+      >
+        <Text style={styles.primaryButtonText}>Save Profile</Text>
+      </Pressable>
+    </ScrollView>
   );
 }
