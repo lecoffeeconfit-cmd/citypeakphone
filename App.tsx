@@ -341,9 +341,11 @@ function PostCard({
           </Pressable>
         ))}
 
-        <View style={styles.reaction}>
-          <Text style={styles.reactionText}>💬 {post.comments.length}</Text>
-        </View>
+        <Pressable style={styles.commentButton} onPress={onOpen}>
+  <Text style={styles.commentButtonText}>
+    💬 Comments {post.comments.length}
+  </Text>
+</Pressable>
       </View>
     </Pressable>
   );
@@ -654,6 +656,19 @@ function BottomNav({
 }
 
 const styles = StyleSheet.create({
+  commentButton: {
+  backgroundColor: "#1D4ED8",
+  paddingVertical: 9,
+  paddingHorizontal: 14,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "#3B82F6",
+},
+
+commentButtonText: {
+  color: "white",
+  fontWeight: "900",
+},
   container: {
     flex: 1,
     backgroundColor: "#020617",
