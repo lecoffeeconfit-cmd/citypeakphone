@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
-import type { Post, ReactionKey, Tab } from "../types";
+import { postCategories } from "../types";
+import type { Post, PostCategory, ReactionKey, Tab } from "../types";
 
 type FeedMode = "latest" | "trending";
+type CategoryFilter = "All" | PostCategory;
 
 type FeedScreenProps = {
   posts: Post[];
@@ -15,6 +17,8 @@ type FeedScreenProps = {
   currentUserId: string;
   onDeletePost: (postId: string) => void;
 };
+
+const categoryFilters: CategoryFilter[] = ["All", ...postCategories];
 
 function getTrendingScore(post: Post) {
   const reactionScore =
@@ -42,16 +46,21 @@ export function FeedScreen({
   onDeletePost,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
 
   const filteredPosts = useMemo(() => {
-    const areaPosts = posts.filter((post) => post.location === selectedArea);
+    let areaPosts = posts.filter((post) => post.location === selectedArea);
+
+    if (categoryFilter !== "All") {
+      areaPosts = areaPosts.filter((post) => post.category === categoryFilter);
+    }
 
     if (feedMode === "trending") {
       return [...areaPosts].sort((a, b) => getTrendingScore(b) - getTrendingScore(a));
     }
 
     return areaPosts;
-  }, [posts, selectedArea, feedMode]);
+  }, [posts, selectedArea, feedMode, categoryFilter]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -104,12 +113,42 @@ export function FeedScreen({
                 </Text>
               </Pressable>
             </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoryFilterRow}
+            >
+              {categoryFilters.map((category) => (
+                <Pressable
+                  key={category}
+                  style={[
+                    styles.categoryFilterChip,
+                    categoryFilter === category && styles.categoryFilterChipActive,
+                  ]}
+                  onPress={() => setCategoryFilter(category)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryFilterText,
+                      categoryFilter === category && styles.categoryFilterTextActive,
+                    ]}
+                  >
+                    {category === "All" ? "🌎 All" : category}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </>
         }
         ListEmptyComponent={
           <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>No posts here yet</Text>
-            <Text style={styles.muted}>Create the first post for this area.</Text>
+            <Text style={styles.muted}>
+              {categoryFilter === "All"
+                ? "Create the first post for this area."
+                : `No ${categoryFilter} posts yet. Create the first one.`}
+            </Text>
           </View>
         }
         renderItem={({ item }) => (

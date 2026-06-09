@@ -652,4 +652,33 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 5,
   },
+
+    categoryFilterRow: {
+    paddingBottom: 16,
+    gap: 10,
+  },
+
+  categoryFilterChip: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    marginRight: 10,
+  },
+
+  categoryFilterChipActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#60A5FA",
+  },
+
+  categoryFilterText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+  },
+
+  categoryFilterTextActive: {
+    color: "white",
+  },
 });

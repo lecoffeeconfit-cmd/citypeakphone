@@ -28,8 +28,14 @@ import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { styles } from "./src/styles";
-import type { Comment, MediaType, Post, ReactionKey, Tab } from "./src/types";
-
+import type {
+  Comment,
+  MediaType,
+  Post,
+  PostCategory,
+  ReactionKey,
+  Tab,
+} from "./src/types";
 export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
@@ -157,45 +163,59 @@ export default function App() {
   text: string,
   anonymous: boolean,
   mediaUri?: string,
-  mediaType?: MediaType
+  mediaType?: MediaType,
+  category?: PostCategory
 ) {
   if (!currentUser) return;
+
+  if (!category) {
+    alert("Please choose a category.");
+    return;
+  }
+
   setPostingStatus(
-  mediaType === "video"
-    ? "🎥 Posting your video..."
-    : "📝 Posting..."
-);
+    mediaType === "video"
+      ? "🎥 Posting your video..."
+      : "📝 Posting..."
+  );
 
   setTab("feed");
 
   let uploadedMediaUrl = "";
 
-  if (mediaUri) {
-    const result = await uploadMediaToSupabase(mediaUri, mediaType);
+  try {
+    if (mediaUri) {
+      const result = await uploadMediaToSupabase(mediaUri, mediaType);
 
-    if (result) {
-      uploadedMediaUrl = result;
+      if (result) {
+        uploadedMediaUrl = result;
+      }
     }
+
+    await addDoc(collection(db, "posts"), {
+      uid: currentUser.uid,
+      username,
+      author: anonymous ? "Anonymous" : `@${username}`,
+      anonymous,
+      text,
+      location: selectedArea,
+      category,
+      imageUri: uploadedMediaUrl,
+      mediaType: mediaType || "",
+      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
+      comments: [],
+      createdAt: serverTimestamp(),
+    });
+
+    setPostingStatus("✅ Posted!");
+
+    setTimeout(() => {
+      setPostingStatus("");
+    }, 2500);
+  } catch (error: any) {
+    setPostingStatus("");
+    alert(error.message || "Post failed.");
   }
-
-  await addDoc(collection(db, "posts"), {
-    uid: currentUser.uid,
-    username,
-    author: anonymous ? "Anonymous" : `@${username}`,
-    anonymous,
-    text,
-    location: selectedArea,
-    imageUri: uploadedMediaUrl,
-    mediaType: mediaType || "",
-    reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-    comments: [],
-    createdAt: serverTimestamp(),
-  });
-  setPostingStatus("✅ Posted!");
-
-setTimeout(() => {
-  setPostingStatus("");
-}, 2500);
 }
 
   async function reactToPost(postId: string, reaction: ReactionKey) {

@@ -3,14 +3,16 @@ import { Image, Pressable, ScrollView, Switch, Text, TextInput, View } from "rea
 import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
-import type { MediaType } from "../types";
+import type { MediaType, PostCategory } from "../types";
+import { postCategories } from "../types";
 
 type CreatePostScreenProps = {
   addPost: (
     text: string,
     anonymous: boolean,
     mediaUri?: string,
-    mediaType?: MediaType
+    mediaType?: MediaType,
+    category?: PostCategory
   ) => Promise<void>;
   selectedArea: string;
 };
@@ -37,6 +39,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   const [anonymous, setAnonymous] = useState(true);
   const [mediaUri, setMediaUri] = useState<string | undefined>();
   const [mediaType, setMediaType] = useState<MediaType | undefined>();
+  const [category, setCategory] = useState<PostCategory | undefined>();
   const [uploading, setUploading] = useState(false);
 
   async function pickMedia() {
@@ -64,6 +67,11 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   async function handlePublish() {
     if (uploading) return;
 
+    if (!category) {
+      alert("Please choose a category.");
+      return;
+    }
+
     if (!text.trim() && !mediaUri) {
       alert("Add text, a photo, or a video first.");
       return;
@@ -73,16 +81,18 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       setUploading(true);
 
       const postText = text.trim();
-const postMediaUri = mediaUri;
-const postMediaType = mediaType;
-const postAnonymous = anonymous;
+      const postMediaUri = mediaUri;
+      const postMediaType = mediaType;
+      const postAnonymous = anonymous;
+      const postCategory = category;
 
-setText("");
-setMediaUri(undefined);
-setMediaType(undefined);
-setAnonymous(true);
+      setText("");
+      setMediaUri(undefined);
+      setMediaType(undefined);
+      setAnonymous(true);
+      setCategory(undefined);
 
-await addPost(postText, postAnonymous, postMediaUri, postMediaType);
+      await addPost(postText, postAnonymous, postMediaUri, postMediaType, postCategory);
     } catch (error: any) {
       alert(error.message || "Something went wrong while posting.");
     } finally {
@@ -95,8 +105,36 @@ await addPost(postText, postAnonymous, postMediaUri, postMediaType);
       <Text style={styles.screenTitle}>Create Post</Text>
       <Text style={styles.screenSubtext}>Posting to {selectedArea}</Text>
 
+      <Text style={styles.smallTitle}>Choose Category</Text>
+
+      <View style={styles.chipWrap}>
+        {postCategories.map((item) => (
+          <Pressable
+            key={item}
+            style={[
+              styles.chip,
+              category === item && {
+                backgroundColor: "#2563EB",
+                borderColor: "#60A5FA",
+              },
+            ]}
+            onPress={() => setCategory(item)}
+            disabled={uploading}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                category === item && { color: "white" },
+              ]}
+            >
+              {item}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       <TextInput
-        style={styles.textArea}
+        style={[styles.textArea, { marginTop: 18 }]}
         placeholder="What's happening locally?"
         placeholderTextColor="#64748B"
         multiline
@@ -137,14 +175,12 @@ await addPost(postText, postAnonymous, postMediaUri, postMediaType);
           <Text style={styles.switchLabel}>Post anonymously</Text>
           <Text style={styles.switchHelp}>Hide your username on this post.</Text>
         </View>
+
         <Switch value={anonymous} onValueChange={setAnonymous} disabled={uploading} />
       </View>
 
       <Pressable
-        style={[
-          styles.primaryButton,
-          uploading && { opacity: 0.6 },
-        ]}
+        style={[styles.primaryButton, uploading && { opacity: 0.6 }]}
         onPress={handlePublish}
         disabled={uploading}
       >

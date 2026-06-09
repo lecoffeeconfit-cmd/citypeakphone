@@ -2,6 +2,23 @@ export type Tab = "feed" | "search" | "post" | "profile";
 
 export type ReactionKey = "fire" | "heart" | "laugh" | "wow";
 
+export type PostCategory =
+  | "Educational"
+  | "Entertainment"
+  | "Social"
+  | "Sales & Marketing"
+  | "Random Thoughts"
+  | "Places";
+
+export const postCategories: PostCategory[] = [
+  "Educational",
+  "Entertainment",
+  "Social",
+  "Sales & Marketing",
+  "Random Thoughts",
+  "Places",
+];
+
 export type MediaType = "image" | "video";
 
 export type CommentReply = {
@@ -28,6 +45,7 @@ username?: string;
   author: string;
   anonymous: boolean;
   text: string;
+  category?: PostCategory;
   location: string;
   imageUri?: string;
   mediaType?: MediaType;
