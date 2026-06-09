@@ -5,6 +5,7 @@ import {
   addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   increment,
@@ -204,6 +205,19 @@ setTimeout(() => {
       [`reactions.${reaction}`]: increment(1),
     });
   }
+ async function deletePost(postId: string) {
+  try {
+    alert("Delete button clicked");
+
+    await deleteDoc(doc(db, "posts", postId));
+
+    alert("Post deleted");
+  } catch (error: any) {
+    console.log(error);
+    alert(error.message);
+  }
+}
+
 
   async function addComment(postId: string, text: string, anonymous: boolean) {
     if (!currentUser) return;
@@ -354,12 +368,14 @@ setTimeout(() => {
 
 {tab === "feed" && (
         <FeedScreen
-          posts={posts}
-          selectedArea={selectedArea}
-          setTab={setTab}
-          onReact={reactToPost}
-          onOpenPost={setSelectedPost}
-        />
+  posts={posts}
+  selectedArea={selectedArea}
+  setTab={setTab}
+  onReact={reactToPost}
+  onOpenPost={setSelectedPost}
+  currentUserId={currentUser.uid}
+  onDeletePost={deletePost}
+/>
       )}
 
       {tab === "search" && (

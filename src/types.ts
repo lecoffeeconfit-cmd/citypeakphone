@@ -23,6 +23,8 @@ export type Comment = {
 
 export type Post = {
   id: string;
+  uid?: string;
+username?: string;
   author: string;
   anonymous: boolean;
   text: string;

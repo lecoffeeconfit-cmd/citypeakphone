@@ -12,6 +12,8 @@ type FeedScreenProps = {
   setTab: (tab: Tab) => void;
   onReact: (postId: string, reaction: ReactionKey) => void;
   onOpenPost: (post: Post) => void;
+  currentUserId: string;
+  onDeletePost: (postId: string) => void;
 };
 
 function getTrendingScore(post: Post) {
@@ -36,6 +38,8 @@ export function FeedScreen({
   setTab,
   onReact,
   onOpenPost,
+  currentUserId,
+  onDeletePost,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
 
@@ -109,7 +113,13 @@ export function FeedScreen({
           </View>
         }
         renderItem={({ item }) => (
-          <PostCard post={item} onReact={onReact} onOpen={() => onOpenPost(item)} />
+          <PostCard
+            post={item}
+            onReact={onReact}
+            onOpen={() => onOpenPost(item)}
+            currentUserId={currentUserId}
+            onDeletePost={onDeletePost}
+          />
         )}
       />
 

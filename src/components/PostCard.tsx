@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pressable, Text, View } from "react-native";
+import { Alert, Image, Pressable, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
@@ -9,6 +9,8 @@ type PostCardProps = {
   post: Post;
   onReact: (postId: string, reaction: ReactionKey) => void;
   onOpen: () => void;
+  currentUserId?: string;
+  onDeletePost?: (postId: string) => void;
 };
 
 function PostVideo({ uri }: { uri: string }) {
@@ -27,8 +29,30 @@ function PostVideo({ uri }: { uri: string }) {
   );
 }
 
-export function PostCard({ post, onReact, onOpen }: PostCardProps) {
+export function PostCard({
+  post,
+  onReact,
+  onOpen,
+  currentUserId,
+  onDeletePost,
+}: PostCardProps) {
   const previewComments = post.comments.slice(0, 3);
+  const isOwner = !!currentUserId && post.uid === currentUserId;
+
+  function confirmDelete() {
+    Alert.alert(
+      "Delete post?",
+      "This will permanently delete your post.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => onDeletePost?.(post.id),
+        },
+      ]
+    );
+  }
 
   return (
     <Pressable style={styles.postCard} onPress={onOpen}>
@@ -46,7 +70,25 @@ export function PostCard({ post, onReact, onOpen }: PostCardProps) {
           </Text>
         </View>
 
-        <Text style={styles.more}>•••</Text>
+       {isOwner ? (
+  <Pressable
+    onPress={(event: any) => {
+      event.stopPropagation?.();
+      onDeletePost?.(post.id);
+    }}
+    style={{
+      backgroundColor: "#7F1D1D",
+      paddingVertical: 8,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+    }}
+    hitSlop={20}
+  >
+    <Text style={{ color: "white", fontWeight: "900" }}>Delete</Text>
+  </Pressable>
+) : (
+  <Text style={styles.more}>•••</Text>
+)}
       </View>
 
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
