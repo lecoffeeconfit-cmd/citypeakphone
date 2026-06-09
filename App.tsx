@@ -36,6 +36,7 @@ export default function App() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [postingStatus, setPostingStatus] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -152,39 +153,49 @@ export default function App() {
   }
 
   async function addPost(
-    text: string,
-    anonymous: boolean,
-    mediaUri?: string,
-    mediaType?: MediaType
-  ) {
-    if (!currentUser) return;
+  text: string,
+  anonymous: boolean,
+  mediaUri?: string,
+  mediaType?: MediaType
+) {
+  if (!currentUser) return;
+  setPostingStatus(
+  mediaType === "video"
+    ? "🎥 Posting your video..."
+    : "📝 Posting..."
+);
 
-    let uploadedMediaUrl = "";
+  setTab("feed");
 
-    if (mediaUri) {
-      const result = await uploadMediaToSupabase(mediaUri, mediaType);
+  let uploadedMediaUrl = "";
 
-      if (result) {
-        uploadedMediaUrl = result;
-      }
+  if (mediaUri) {
+    const result = await uploadMediaToSupabase(mediaUri, mediaType);
+
+    if (result) {
+      uploadedMediaUrl = result;
     }
-
-    await addDoc(collection(db, "posts"), {
-      uid: currentUser.uid,
-      username,
-      author: anonymous ? "Anonymous" : `@${username}`,
-      anonymous,
-      text,
-      location: selectedArea,
-      imageUri: uploadedMediaUrl,
-      mediaType: mediaType || "",
-      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-      comments: [],
-      createdAt: serverTimestamp(),
-    });
-
-    setTab("feed");
   }
+
+  await addDoc(collection(db, "posts"), {
+    uid: currentUser.uid,
+    username,
+    author: anonymous ? "Anonymous" : `@${username}`,
+    anonymous,
+    text,
+    location: selectedArea,
+    imageUri: uploadedMediaUrl,
+    mediaType: mediaType || "",
+    reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
+    comments: [],
+    createdAt: serverTimestamp(),
+  });
+  setPostingStatus("✅ Posted!");
+
+setTimeout(() => {
+  setPostingStatus("");
+}, 2500);
+}
 
   async function reactToPost(postId: string, reaction: ReactionKey) {
     const postRef = doc(db, "posts", postId);
@@ -304,9 +315,44 @@ export default function App() {
         <Pressable style={styles.headerPill} onPress={() => setTab("search")}>
           <Text style={styles.headerPillText}>{selectedArea}</Text>
         </Pressable>
-      </View>
+     </View>
 
-      {tab === "feed" && (
+{postingStatus !== "" && (
+  <View
+    style={{
+      marginHorizontal: 20,
+      marginBottom: 12,
+      backgroundColor: "#0F172A",
+      borderWidth: 1,
+      borderColor: "#2563EB",
+      borderRadius: 18,
+      padding: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "white",
+        fontWeight: "900",
+        textAlign: "center",
+      }}
+    >
+      {postingStatus}
+    </Text>
+
+    <Text
+      style={{
+        color: "#94A3B8",
+        fontSize: 12,
+        textAlign: "center",
+        marginTop: 4,
+      }}
+    >
+      Keep CityPeak open while upload finishes.
+    </Text>
+  </View>
+)}
+
+{tab === "feed" && (
         <FeedScreen
           posts={posts}
           selectedArea={selectedArea}

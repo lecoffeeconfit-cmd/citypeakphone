@@ -630,4 +630,26 @@ export const styles = StyleSheet.create({
     textAlignVertical: "top",
     marginBottom: 12,
   },
+
+    uploadingCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 14,
+  },
+
+  uploadingText: {
+    color: "white",
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  uploadingSubtext: {
+    color: "#94A3B8",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 5,
+  },
 });
