@@ -17,6 +17,11 @@ type PostDetailsModalProps = {
     text: string,
     anonymous: boolean
   ) => void;
+  currentUserId?: string;
+onDeletePost?: (postId: string) => void;
+onReportPost?: (postId: string, reason: string) => void;
+onReportComment?: (postId: string, commentId: string, reason: string) => void;
+onDeleteComment?: (postId: string, commentId: string) => void;
 };
 
 export function PostDetailsModal({
@@ -26,6 +31,11 @@ export function PostDetailsModal({
   onAddComment,
   onLikeComment,
   onAddReply,
+  currentUserId,
+  onDeletePost,
+  onReportPost,
+  onReportComment,
+  onDeleteComment,
 }: PostDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -47,7 +57,16 @@ export function PostDetailsModal({
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
-            <PostCard post={post} onReact={onReact} onOpen={() => {}} />
+            <View style={styles.postCard}>
+  <Text style={styles.author}>{post.author}</Text>
+  <Text style={styles.location}>
+    {post.location} • {timeAgo(post.createdAt)}
+  </Text>
+
+  {!!post.text && (
+    <Text style={styles.postText}>{post.text}</Text>
+  )}
+</View>
 
             <Text style={styles.smallTitle}>Comments</Text>
 

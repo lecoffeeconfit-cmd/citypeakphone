@@ -31,6 +31,8 @@ export type CommentReply = {
 
 export type Comment = {
   id: string;
+  uid?: string;
+  username?: string;
   author: string;
   text: string;
   likes?: number;

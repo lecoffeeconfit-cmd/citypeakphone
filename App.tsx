@@ -237,26 +237,139 @@ export default function App() {
     alert(error.message);
   }
 }
+async function reportPost(postId: string, reason: string) {
+  if (!currentUser) return;
+
+  const targetPost = posts.find((post) => post.id === postId);
+
+  if (!targetPost) {
+    alert("Post not found.");
+    return;
+  }
+
+  if (targetPost.uid === currentUser.uid) {
+    alert("You cannot report your own post.");
+    return;
+  }
+
+  await addDoc(collection(db, "reports"), {
+    type: "post",
+    postId,
+    postText: targetPost.text || "",
+    postOwnerUid: targetPost.uid || "",
+    postAuthor: targetPost.author || "",
+    reportedByUid: currentUser.uid,
+    reportedByUsername: username,
+    reason,
+    status: "open",
+    createdAt: serverTimestamp(),
+  });
+
+  alert("Report submitted. Thank you for helping keep CityPeak safe.");
+}
+
+async function reportComment(postId: string, commentId: string, reason: string) {
+  if (!currentUser) return;
+
+  const targetPost = posts.find((post) => post.id === postId);
+
+  if (!targetPost) {
+    alert("Post not found.");
+    return;
+  }
+
+  const targetComment = targetPost.comments.find(
+    (comment) => comment.id === commentId
+  );
+
+  if (!targetComment) {
+    alert("Comment not found.");
+    return;
+  }
+
+  if (targetComment.uid === currentUser.uid) {
+    alert("You cannot report your own comment.");
+    return;
+  }
+
+  await addDoc(collection(db, "reports"), {
+    type: "comment",
+    postId,
+    commentId,
+    commentText: targetComment.text || "",
+    commentAuthor: targetComment.author || "",
+    commentOwnerUid: targetComment.uid || "",
+    reportedByUid: currentUser.uid,
+    reportedByUsername: username,
+    reason,
+    status: "open",
+    createdAt: serverTimestamp(),
+  });
+
+  alert("Comment report submitted.");
+}
+
+async function deleteComment(postId: string, commentId: string) {
+  if (!currentUser) return;
+
+  const targetPost = posts.find((post) => post.id === postId);
+
+  if (!targetPost) {
+    alert("Post not found.");
+    return;
+  }
+
+  const targetComment = targetPost.comments.find(
+    (comment) => comment.id === commentId
+  );
+
+  if (!targetComment) {
+    alert("Comment not found.");
+    return;
+  }
+
+  const isOwner =
+    targetComment.uid === currentUser.uid ||
+    targetComment.author === `@${username}`;
+
+  if (!isOwner) {
+    alert("You can only delete your own comments.");
+    return;
+  }
+
+  const updatedComments = targetPost.comments.filter(
+    (comment) => comment.id !== commentId
+  );
+
+  await updateDoc(doc(db, "posts", postId), {
+    comments: updatedComments,
+  });
+
+  alert("Comment deleted.");
+}
+
 
 
   async function addComment(postId: string, text: string, anonymous: boolean) {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      author: anonymous ? "Anonymous" : `@${username}`,
-      text,
-      likes: 0,
-      replies: [],
-      createdAt: Date.now(),
-    };
+  const newComment: Comment = {
+    id: Date.now().toString(),
+    uid: currentUser.uid,
+    username,
+    author: anonymous ? "Anonymous" : `@${username}`,
+    text,
+    likes: 0,
+    replies: [],
+    createdAt: Date.now(),
+  };
 
-    const postRef = doc(db, "posts", postId);
+  const postRef = doc(db, "posts", postId);
 
-    await updateDoc(postRef, {
-      comments: arrayUnion(newComment),
-    });
-  }
+  await updateDoc(postRef, {
+    comments: arrayUnion(newComment),
+  });
+}
 
   async function likeComment(postId: string, commentId: string) {
     const targetPost = posts.find((post) => post.id === postId);
@@ -395,6 +508,7 @@ export default function App() {
   onOpenPost={setSelectedPost}
   currentUserId={currentUser.uid}
   onDeletePost={deletePost}
+  onReportPost={reportPost}
 />
       )}
 
@@ -434,13 +548,18 @@ export default function App() {
       <BottomNav tab={tab} setTab={setTab} />
 
       <PostDetailsModal
-        post={selectedPost}
-        onClose={() => setSelectedPost(null)}
-        onReact={reactToPost}
-        onAddComment={addComment}
-        onLikeComment={likeComment}
-        onAddReply={addReply}
-      />
+  post={selectedPost}
+  onClose={() => setSelectedPost(null)}
+  onReact={reactToPost}
+  onAddComment={addComment}
+  onLikeComment={likeComment}
+  onAddReply={addReply}
+  currentUserId={currentUser?.uid}
+  onDeletePost={deletePost}
+  onReportPost={reportPost}
+  onReportComment={reportComment}
+  onDeleteComment={deleteComment}
+/>
     </SafeAreaView>
   );
 }

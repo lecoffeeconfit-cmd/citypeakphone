@@ -16,6 +16,7 @@ type FeedScreenProps = {
   onOpenPost: (post: Post) => void;
   currentUserId: string;
   onDeletePost: (postId: string) => void;
+  onReportPost: (postId: string, reason: string) => void;
 };
 
 const categoryFilters: CategoryFilter[] = ["All", ...postCategories];
@@ -44,6 +45,7 @@ export function FeedScreen({
   onOpenPost,
   currentUserId,
   onDeletePost,
+  onReportPost,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
@@ -153,12 +155,13 @@ export function FeedScreen({
         }
         renderItem={({ item }) => (
           <PostCard
-            post={item}
-            onReact={onReact}
-            onOpen={() => onOpenPost(item)}
-            currentUserId={currentUserId}
-            onDeletePost={onDeletePost}
-          />
+  post={item}
+  onReact={onReact}
+  onOpen={() => onOpenPost(item)}
+  currentUserId={currentUserId}
+  onDeletePost={onDeletePost}
+  onReportPost={onReportPost}
+/>
         )}
       />
 
