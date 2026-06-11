@@ -269,7 +269,7 @@ onContentSizeChange={() => {
     messagesListRef.current?.scrollToEnd({
       animated: true,
     });
-  }, 50);
+  }, 10);
 }}
 
 renderItem={({ item }) => {
@@ -345,11 +345,13 @@ renderItem={({ item }) => {
 
         <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
           <TextInput
-            value={messageText}
-            onChangeText={setMessageText}
-            placeholder="Type a message..."
-            placeholderTextColor="#64748B"
-            style={{
+  value={messageText}
+  onChangeText={setMessageText}
+  onSubmitEditing={sendMessage}
+  returnKeyType="send"
+  placeholder="Type a message..."
+  placeholderTextColor="#64748B"
+  style={{
               flex: 1,
               backgroundColor: "#0F172A",
               color: "white",
