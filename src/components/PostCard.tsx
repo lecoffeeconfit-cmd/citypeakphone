@@ -11,6 +11,7 @@ type PostCardProps = {
     currentUserId?: string;
     onDeletePost?: (postId: string) => void;
     onReportPost?: (postId: string, reason: string) => void;
+    onMessagePost?: () => void;
 };
 
 function PostVideo({ uri }: { uri: string }) {
@@ -35,7 +36,8 @@ export function PostCard({
     onOpen,
     currentUserId,
     onDeletePost,
-    onReportPost,
+   onReportPost,
+onMessagePost,
 }: PostCardProps) {
     const previewComments = post.comments.slice(0, 3);
     const isOwner = !!currentUserId && post.uid === currentUserId;
@@ -195,11 +197,17 @@ export function PostCard({
                     </Pressable>
                 ))}
 
-                <Pressable style={styles.commentButton} onPress={onOpen}>
-                    <Text style={styles.commentButtonText}>
-                        💬 Comments {post.comments.length}
-                    </Text>
-                </Pressable>
+               <Pressable style={styles.commentButton} onPress={onOpen}>
+  <Text style={styles.commentButtonText}>
+    💬 Comments {post.comments.length}
+  </Text>
+</Pressable>
+
+{!post.anonymous && !isOwner && (
+  <Pressable style={styles.commentButton} onPress={onMessagePost}>
+    <Text style={styles.commentButtonText}>✉️ Message</Text>
+  </Pressable>
+)}
             </View>
 
             {previewComments.length > 0 && (

@@ -9,12 +9,13 @@ import {
   doc,
   getDoc,
   increment,
-  onSnapshot,
+    onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 import { auth, db } from "./firebase";
@@ -27,6 +28,7 @@ import { CreatePostScreen } from "./src/screens/CreatePostScreen";
 import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
+import { MessagesScreen } from "./src/screens/MessagesScreen";
 import { styles } from "./src/styles";
 import type {
   Comment,
@@ -48,6 +50,8 @@ export default function App() {
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [startingMessageUserId, setStartingMessageUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -94,6 +98,29 @@ export default function App() {
 
     return unsubscribe;
   }, [currentUser]);
+  useEffect(() => {
+  if (!currentUser) return;
+
+  const q = query(
+    collection(db, "messages"),
+    where("participants", "array-contains", currentUser.uid)
+  );
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unreadCount = snapshot.docs.filter((messageDoc) => {
+      const data = messageDoc.data();
+
+      return (
+        data.fromUid !== currentUser.uid &&
+        !(data.readBy ?? []).includes(currentUser.uid)
+      );
+    }).length;
+
+    setUnreadMessagesCount(unreadCount);
+  });
+
+  return unsubscribe;
+}, [currentUser]);
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
     const response = await fetch(uri);
@@ -428,6 +455,26 @@ async function deleteComment(postId: string, commentId: string) {
     });
   }
 
+  function startMessageFromPost(post: Post) {
+  if (!post.uid) {
+    alert("This user cannot be messaged.");
+    return;
+  }
+
+  if (post.anonymous) {
+    alert("Anonymous posts cannot be messaged.");
+    return;
+  }
+
+  if (post.uid === currentUser?.uid) {
+    alert("You cannot message yourself.");
+    return;
+  }
+
+  setStartingMessageUserId(post.uid);
+  setTab("messages");
+}
+
   async function handleLogout() {
     await signOut(auth);
   }
@@ -509,6 +556,7 @@ async function deleteComment(postId: string, commentId: string) {
   currentUserId={currentUser.uid}
   onDeletePost={deletePost}
   onReportPost={reportPost}
+  onMessagePost={startMessageFromPost}
 />
       )}
 
@@ -525,6 +573,33 @@ async function deleteComment(postId: string, commentId: string) {
         <CreatePostScreen addPost={addPost} selectedArea={selectedArea} />
       )}
 
+{tab === "messages" && (
+  <MessagesScreen
+    currentUser={currentUser}
+    username={username}
+    startingUserId={startingMessageUserId}
+  />
+)}
+
+{tab === "profile" && (
+  <View style={{ flex: 1 }}>
+    <ProfileScreen
+      username={username}
+      setUsername={setUsername}
+      bio={bio}
+      setBio={setBio}
+      photoUrl={photoUrl}
+      onSaveProfile={saveProfile}
+    />
+
+    <Pressable
+      style={[styles.secondaryButton, { marginHorizontal: 20 }]}
+      onPress={handleLogout}
+    >
+      <Text style={styles.secondaryButtonText}>Log Out</Text>
+    </Pressable>
+  </View>
+)}
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
           <ProfileScreen
@@ -545,8 +620,11 @@ async function deleteComment(postId: string, commentId: string) {
         </View>
       )}
 
-      <BottomNav tab={tab} setTab={setTab} />
-
+<BottomNav
+  tab={tab}
+  setTab={setTab}
+  unreadMessagesCount={unreadMessagesCount}
+/>
       <PostDetailsModal
   post={selectedPost}
   onClose={() => setSelectedPost(null)}

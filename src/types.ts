@@ -1,4 +1,4 @@
-export type Tab = "feed" | "search" | "post" | "profile";
+export type Tab = "feed" | "search" | "post" | "messages" | "profile";
 
 export type ReactionKey = "fire" | "heart" | "laugh" | "wow";
 
