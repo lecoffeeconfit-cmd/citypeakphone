@@ -9,41 +9,45 @@ type BottomNavProps = {
   unreadMessagesCount?: number;
 };
 
-export function BottomNav({ tab, setTab, unreadMessagesCount = 0 }: BottomNavProps) {  const items: { key: Tab; label: string }[] = [
-    { key: "feed", label: "Feed" },
-    { key: "search", label: "Search" },
-    { key: "post", label: "Post" },
-    { key: "messages", label: "Messages" },
-    { key: "profile", label: "Profile" },
+export function BottomNav({
+  tab,
+  setTab,
+  unreadMessagesCount = 0,
+}: BottomNavProps) {
+  const items: { key: Tab; label: string; icon: string }[] = [
+    { key: "feed", label: "Feed", icon: "⌂" },
+    { key: "search", label: "Scan", icon: "◇" },
+    { key: "post", label: "Peak", icon: "+" },
+    { key: "messages", label: "DMs", icon: "✦" },
+    { key: "profile", label: "Me", icon: "◉" },
   ];
 
   return (
     <View style={styles.bottomNav}>
-      {items.map((item) => (
-        <Pressable
-          key={item.key}
-          onPress={() => setTab(item.key)}
-          style={styles.navButton}
-        >
-          <Text style={tab === item.key ? styles.navIconActive : styles.navIcon}>
-            {item.key === "feed"
-              ? "🏠"
-              : item.key === "search"
-              ? "🔍"
-              : item.key === "post"
-              ? "➕"
-              : item.key === "messages"
-              ? "💬"
-              : "👤"}
-          </Text>
+      {items.map((item) => {
+        const isActive = tab === item.key;
+        const showUnread = item.key === "messages" && unreadMessagesCount > 0;
 
-         <Text style={tab === item.key ? styles.navItemActive : styles.navItem}>
-  {item.key === "messages" && unreadMessagesCount > 0
-    ? `${item.label} ${unreadMessagesCount}`
-    : item.label}
-</Text>
-        </Pressable>
-      ))}
+        return (
+          <Pressable
+            key={item.key}
+            onPress={() => setTab(item.key)}
+            style={isActive ? styles.navButtonActive : styles.navButton}
+          >
+            <View style={isActive ? styles.navIconBubbleActive : styles.navIconBubble}>
+              <Text style={isActive ? styles.navIconActive : styles.navIcon}>
+                {item.icon}
+              </Text>
+
+              {showUnread && <View style={styles.navUnreadDot} />}
+            </View>
+
+            <Text style={isActive ? styles.navItemActive : styles.navItem}>
+              {showUnread ? `${item.label} ${unreadMessagesCount}` : item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

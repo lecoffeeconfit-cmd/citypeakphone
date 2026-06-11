@@ -3,13 +3,13 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0F0D",
+    backgroundColor: "#030712",
     paddingTop: 18,
   },
 
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -17,108 +17,109 @@ export const styles = StyleSheet.create({
 
   logo: {
     color: "#F8FAFC",
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: "900",
-    letterSpacing: -1.2,
+    letterSpacing: -1.5,
   },
 
   subtitle: {
-    color: "#9CA3AF",
-    marginTop: 4,
-    fontWeight: "600",
+    color: "#8B5CF6",
+    marginTop: 3,
+    fontWeight: "900",
+    letterSpacing: 0.4,
   },
 
   headerPill: {
-    backgroundColor: "#141A17",
+    backgroundColor: "#111827",
     borderWidth: 1,
-    borderColor: "#26342D",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
+    borderColor: "#22D3EE",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
     maxWidth: 150,
   },
 
   headerPillText: {
-    color: "#B9F24A",
+    color: "#22D3EE",
     fontWeight: "900",
   },
 
   feedList: {
     paddingHorizontal: 18,
-    paddingBottom: 125,
+    paddingBottom: 130,
   },
 
   heroCard: {
-    backgroundColor: "#121914",
-    padding: 22,
-    borderRadius: 34,
-    marginBottom: 16,
+    backgroundColor: "#0B1020",
+    padding: 24,
+    borderRadius: 38,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#26342D",
-    shadowColor: "#B9F24A",
-    shadowOpacity: 0.14,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    borderColor: "#312E81",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.3,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
 
   heroKicker: {
-    color: "#B9F24A",
+    color: "#22D3EE",
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
-    letterSpacing: 1.4,
+    letterSpacing: 1.8,
   },
 
   heroTitle: {
     color: "#F8FAFC",
-    fontSize: 34,
+    fontSize: 38,
     fontWeight: "900",
-    marginTop: 5,
-    letterSpacing: -1,
+    marginTop: 6,
+    letterSpacing: -1.4,
   },
 
   heroText: {
-    color: "#A1A1AA",
-    marginTop: 9,
-    lineHeight: 22,
-    fontWeight: "600",
+    color: "#A5B4FC",
+    marginTop: 10,
+    lineHeight: 23,
+    fontWeight: "700",
   },
 
   postCard: {
-    backgroundColor: "#121914",
-    padding: 16,
-    borderRadius: 32,
-    marginBottom: 16,
+    backgroundColor: "#090E1D",
+    padding: 17,
+    borderRadius: 36,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#253228",
-    shadowColor: "#000",
-    shadowOpacity: 0.35,
+    borderColor: "#1E3A8A",
+    shadowColor: "#22D3EE",
+    shadowOpacity: 0.16,
     shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 7,
   },
 
   postHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#B9F24A",
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    backgroundColor: "#22D3EE",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#E7FF8F",
+    borderColor: "#A78BFA",
   },
 
   avatarText: {
-    color: "#111827",
+    color: "#020617",
     fontWeight: "900",
   },
 
@@ -129,176 +130,178 @@ export const styles = StyleSheet.create({
   },
 
   location: {
-    color: "#7C867F",
+    color: "#818CF8",
     fontSize: 12,
-    marginTop: 2,
-    fontWeight: "700",
+    marginTop: 3,
+    fontWeight: "800",
   },
 
   more: {
-    color: "#7C867F",
+    color: "#818CF8",
     fontWeight: "900",
   },
 
   postText: {
     color: "#F8FAFC",
     fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 14,
-    fontWeight: "600",
+    lineHeight: 25,
+    marginBottom: 15,
+    fontWeight: "700",
   },
 
   postImage: {
     width: "100%",
-    height: 240,
-    borderRadius: 26,
-    marginBottom: 14,
-    backgroundColor: "#1B241F",
+    height: 250,
+    borderRadius: 30,
+    marginBottom: 15,
+    backgroundColor: "#111827",
   },
 
   reactionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 9,
   },
 
   reaction: {
-    backgroundColor: "#1A211D",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+    backgroundColor: "#111827",
+    paddingVertical: 9,
+    paddingHorizontal: 13,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#2B3A31",
+    borderColor: "#312E81",
   },
 
   reactionText: {
-    color: "#E5E7EB",
+    color: "#E0E7FF",
     fontWeight: "900",
   },
 
   commentButton: {
-    backgroundColor: "#B9F24A",
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 999,
+    backgroundColor: "#22D3EE",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E7FF8F",
+    borderColor: "#67E8F9",
   },
 
   commentButtonText: {
-    color: "#111827",
+    color: "#020617",
     fontWeight: "900",
   },
 
   floatingButton: {
     position: "absolute",
     right: 22,
-    bottom: 98,
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: "#B9F24A",
+    bottom: 102,
+    width: 66,
+    height: 66,
+    borderRadius: 22,
+    backgroundColor: "#8B5CF6",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#B9F24A",
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowColor: "#8B5CF6",
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+    transform: [{ rotate: "8deg" }],
   },
 
   floatingButtonText: {
-    color: "#111827",
-    fontSize: 38,
-    fontWeight: "700",
-    marginTop: -4,
+    color: "white",
+    fontSize: 40,
+    fontWeight: "800",
+    marginTop: -5,
+    transform: [{ rotate: "-8deg" }],
   },
 
   screen: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 105,
   },
 
   screenTitle: {
     color: "#F8FAFC",
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "900",
     marginBottom: 6,
-    letterSpacing: -0.8,
+    letterSpacing: -1,
   },
 
   screenSubtext: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     marginBottom: 16,
-    lineHeight: 21,
-    fontWeight: "600",
-  },
-
-  input: {
-    backgroundColor: "#121914",
-    color: "#F8FAFC",
-    padding: 15,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#26342D",
-    marginBottom: 12,
+    lineHeight: 22,
     fontWeight: "700",
   },
 
+  input: {
+    backgroundColor: "#090E1D",
+    color: "#F8FAFC",
+    padding: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#312E81",
+    marginBottom: 12,
+    fontWeight: "800",
+  },
+
   textArea: {
-    backgroundColor: "#121914",
+    backgroundColor: "#090E1D",
     color: "#F8FAFC",
     minHeight: 190,
-    padding: 15,
-    borderRadius: 26,
+    padding: 16,
+    borderRadius: 30,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
     textAlignVertical: "top",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   primaryButton: {
-    backgroundColor: "#B9F24A",
-    padding: 16,
-    borderRadius: 22,
+    backgroundColor: "#22D3EE",
+    padding: 17,
+    borderRadius: 24,
     alignItems: "center",
     marginTop: 12,
-    shadowColor: "#B9F24A",
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
+    shadowColor: "#22D3EE",
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 7,
   },
 
   primaryButtonText: {
-    color: "#111827",
+    color: "#020617",
     fontWeight: "900",
     fontSize: 16,
   },
 
   secondaryButton: {
-    backgroundColor: "#171F1A",
-    padding: 15,
-    borderRadius: 22,
+    backgroundColor: "#111827",
+    padding: 16,
+    borderRadius: 24,
     alignItems: "center",
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "#2B3A31",
+    borderColor: "#312E81",
   },
 
   secondaryButtonText: {
-    color: "#E5E7EB",
+    color: "#E0E7FF",
     fontWeight: "900",
   },
 
   previewImage: {
     width: "100%",
-    height: 220,
-    borderRadius: 26,
+    height: 225,
+    borderRadius: 30,
     marginTop: 14,
-    backgroundColor: "#1B241F",
+    backgroundColor: "#111827",
   },
 
   smallTitle: {
@@ -306,7 +309,7 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 24,
     marginBottom: 10,
-    fontSize: 16,
+    fontSize: 17,
   },
 
   chipWrap: {
@@ -316,26 +319,26 @@ export const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#121914",
-    paddingVertical: 11,
-    paddingHorizontal: 15,
-    borderRadius: 999,
+    backgroundColor: "#090E1D",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
   },
 
   chipText: {
-    color: "#E5E7EB",
+    color: "#E0E7FF",
     fontWeight: "900",
   },
 
   switchRow: {
     marginTop: 18,
-    padding: 14,
-    borderRadius: 22,
-    backgroundColor: "#121914",
+    padding: 15,
+    borderRadius: 26,
+    backgroundColor: "#090E1D",
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -347,41 +350,47 @@ export const styles = StyleSheet.create({
   },
 
   switchHelp: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     fontSize: 12,
     marginTop: 3,
+    fontWeight: "700",
   },
 
   profileCard: {
-    backgroundColor: "#121914",
-    padding: 24,
-    borderRadius: 34,
+    backgroundColor: "#090E1D",
+    padding: 26,
+    borderRadius: 38,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
+    shadowColor: "#8B5CF6",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
   },
 
   profileAvatar: {
-    width: 94,
-    height: 94,
-    borderRadius: 47,
-    backgroundColor: "#B9F24A",
+    width: 98,
+    height: 98,
+    borderRadius: 28,
+    backgroundColor: "#22D3EE",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: "#E7FF8F",
+    borderColor: "#A78BFA",
   },
 
   profileAvatarText: {
-    color: "#111827",
-    fontSize: 34,
+    color: "#020617",
+    fontSize: 36,
     fontWeight: "900",
   },
 
   profileName: {
     color: "#F8FAFC",
-    fontSize: 23,
+    fontSize: 24,
     fontWeight: "900",
   },
 
@@ -392,13 +401,13 @@ export const styles = StyleSheet.create({
   },
 
   statBox: {
-    backgroundColor: "#1A211D",
-    borderRadius: 22,
+    backgroundColor: "#111827",
+    borderRadius: 24,
     padding: 14,
-    minWidth: 80,
+    minWidth: 82,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2B3A31",
+    borderColor: "#312E81",
   },
 
   statNumber: {
@@ -408,95 +417,148 @@ export const styles = StyleSheet.create({
   },
 
   statLabel: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     fontSize: 12,
     marginTop: 3,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 
   muted: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     textAlign: "center",
     marginTop: 6,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   emptyCard: {
-    backgroundColor: "#121914",
-    padding: 24,
-    borderRadius: 28,
+    backgroundColor: "#090E1D",
+    padding: 25,
+    borderRadius: 30,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
   },
 
   emptyTitle: {
     color: "#F8FAFC",
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "900",
   },
 
   bottomNav: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 16,
-    backgroundColor: "#111713",
-    borderRadius: 34,
+    left: 14,
+    right: 14,
+    bottom: 15,
+    backgroundColor: "#070B16",
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: "#2B3A31",
-    paddingVertical: 11,
+    borderColor: "#312E81",
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     flexDirection: "row",
     justifyContent: "space-around",
-    shadowColor: "#000",
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
+    shadowColor: "#22D3EE",
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
 
   navButton: {
     alignItems: "center",
-    minWidth: 62,
+    justifyContent: "center",
+    minWidth: 58,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+
+  navButtonActive: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 66,
+    paddingVertical: 7,
+    paddingHorizontal: 5,
+    borderRadius: 22,
+    backgroundColor: "#111827",
+    borderWidth: 1,
+    borderColor: "#22D3EE",
+  },
+
+  navIconBubble: {
+    width: 30,
+    height: 30,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  navIconBubbleActive: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#22D3EE",
+    shadowColor: "#22D3EE",
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 6,
   },
 
   navIcon: {
+    color: "#64748B",
     fontSize: 18,
-    opacity: 0.45,
+    fontWeight: "900",
   },
 
   navIconActive: {
-    fontSize: 21,
+    color: "#020617",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  navUnreadDot: {
+    position: "absolute",
+    right: -2,
+    top: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#F43F5E",
+    borderWidth: 1,
+    borderColor: "#020617",
   },
 
   navItem: {
-    color: "#6B7280",
+    color: "#64748B",
     fontWeight: "900",
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
+    marginTop: 3,
   },
 
   navItemActive: {
-    color: "#B9F24A",
+    color: "#22D3EE",
     fontWeight: "900",
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 10,
+    marginTop: 3,
   },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(10, 15, 13, 0.82)",
+    backgroundColor: "rgba(3, 7, 18, 0.86)",
     justifyContent: "flex-end",
   },
 
   modalSheet: {
     maxHeight: "92%",
-    backgroundColor: "#0A0F0D",
-    borderTopLeftRadius: 34,
-    borderTopRightRadius: 34,
+    backgroundColor: "#030712",
+    borderTopLeftRadius: 38,
+    borderTopRightRadius: 38,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
   },
 
   modalHeader: {
@@ -508,7 +570,7 @@ export const styles = StyleSheet.create({
 
   modalTitle: {
     color: "#F8FAFC",
-    fontSize: 22,
+    fontSize: 23,
     fontWeight: "900",
   },
 
@@ -519,19 +581,19 @@ export const styles = StyleSheet.create({
   },
 
   emptyCommentCard: {
-    backgroundColor: "#121914",
-    borderRadius: 22,
+    backgroundColor: "#090E1D",
+    borderRadius: 24,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
   },
 
   commentCard: {
-    backgroundColor: "#121914",
-    borderRadius: 22,
+    backgroundColor: "#090E1D",
+    borderRadius: 24,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
     marginBottom: 10,
   },
 
@@ -542,17 +604,17 @@ export const styles = StyleSheet.create({
   },
 
   commentText: {
-    color: "#E5E7EB",
+    color: "#E0E7FF",
     lineHeight: 20,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   commentComposer: {
-    backgroundColor: "#121914",
-    borderRadius: 24,
+    backgroundColor: "#090E1D",
+    borderRadius: 28,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
     marginTop: 16,
   },
 
@@ -569,47 +631,47 @@ export const styles = StyleSheet.create({
   },
 
   sendButton: {
-    backgroundColor: "#B9F24A",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
+    backgroundColor: "#22D3EE",
+    paddingVertical: 11,
+    paddingHorizontal: 17,
+    borderRadius: 16,
   },
 
   sendButtonText: {
-    color: "#111827",
+    color: "#020617",
     fontWeight: "900",
   },
 
   previewCommentCard: {
-    backgroundColor: "#1A211D",
-    borderRadius: 18,
-    padding: 10,
+    backgroundColor: "#111827",
+    borderRadius: 22,
+    padding: 11,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#2B3A31",
+    borderColor: "#312E81",
   },
 
   previewCommentMeta: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     fontSize: 12,
     marginTop: 6,
     fontWeight: "800",
   },
 
   viewMoreComments: {
-    color: "#B9F24A",
+    color: "#22D3EE",
     fontWeight: "900",
     marginTop: 10,
   },
 
   replyCard: {
-    backgroundColor: "#1A211D",
-    borderRadius: 18,
+    backgroundColor: "#111827",
+    borderRadius: 22,
     padding: 10,
     marginLeft: 18,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#2B3A31",
+    borderColor: "#312E81",
   },
 
   commentActionRow: {
@@ -619,69 +681,69 @@ export const styles = StyleSheet.create({
   },
 
   commentActionText: {
-    color: "#B9F24A",
+    color: "#22D3EE",
     fontWeight: "900",
     fontSize: 12,
   },
 
   feedToggleRow: {
     flexDirection: "row",
-    backgroundColor: "#121914",
-    borderRadius: 999,
+    backgroundColor: "#090E1D",
+    borderRadius: 20,
     padding: 5,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
   },
 
   feedToggleButton: {
     flex: 1,
-    paddingVertical: 11,
-    borderRadius: 999,
+    paddingVertical: 12,
+    borderRadius: 16,
     alignItems: "center",
   },
 
   feedToggleButtonActive: {
-    backgroundColor: "#B9F24A",
+    backgroundColor: "#22D3EE",
   },
 
   feedToggleText: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     fontWeight: "900",
   },
 
   feedToggleTextActive: {
-    color: "#111827",
+    color: "#020617",
   },
 
   profilePhoto: {
-    width: 94,
-    height: 94,
-    borderRadius: 47,
-    backgroundColor: "#1B241F",
+    width: 98,
+    height: 98,
+    borderRadius: 28,
+    backgroundColor: "#111827",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: "#B9F24A",
+    borderColor: "#22D3EE",
   },
 
   profileBioInput: {
-    backgroundColor: "#121914",
+    backgroundColor: "#090E1D",
     color: "#F8FAFC",
     minHeight: 110,
     padding: 15,
-    borderRadius: 22,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: "#26342D",
+    borderColor: "#312E81",
     textAlignVertical: "top",
     marginBottom: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   uploadingCard: {
-    backgroundColor: "#121914",
+    backgroundColor: "#090E1D",
     borderWidth: 1,
-    borderColor: "#B9F24A",
-    borderRadius: 22,
+    borderColor: "#22D3EE",
+    borderRadius: 26,
     padding: 14,
     marginTop: 14,
   },
@@ -693,11 +755,11 @@ export const styles = StyleSheet.create({
   },
 
   uploadingSubtext: {
-    color: "#A1A1AA",
+    color: "#A5B4FC",
     fontSize: 12,
     textAlign: "center",
     marginTop: 5,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   categoryFilterRow: {
@@ -706,26 +768,26 @@ export const styles = StyleSheet.create({
   },
 
   categoryFilterChip: {
-    backgroundColor: "#121914",
+    backgroundColor: "#090E1D",
     borderWidth: 1,
-    borderColor: "#26342D",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 999,
+    borderColor: "#312E81",
+    paddingVertical: 11,
+    paddingHorizontal: 15,
+    borderRadius: 16,
     marginRight: 10,
   },
 
   categoryFilterChipActive: {
-    backgroundColor: "#B9F24A",
-    borderColor: "#E7FF8F",
+    backgroundColor: "#8B5CF6",
+    borderColor: "#A78BFA",
   },
 
   categoryFilterText: {
-    color: "#D1D5DB",
+    color: "#C7D2FE",
     fontWeight: "900",
   },
 
   categoryFilterTextActive: {
-    color: "#111827",
+    color: "#FFFFFF",
   },
 });
