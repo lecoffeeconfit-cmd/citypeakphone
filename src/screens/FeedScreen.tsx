@@ -22,6 +22,16 @@ type FeedScreenProps = {
 
 const categoryFilters: CategoryFilter[] = ["All", ...postCategories];
 
+const categoryColors: Record<string, string> = {
+  All: "#86B5CF",
+  Educational: "#329BB8",
+  Entertainment: "#003B57",
+  Social: "#F8B400",
+  "Sales & Marketing": "#F58A00",
+  "Random Thoughts": "#86B5CF",
+  Places: "#329BB8",
+};
+
 function getTrendingScore(post: Post) {
   const reactionScore =
     post.reactions.fire +
@@ -38,6 +48,16 @@ function getTrendingScore(post: Post) {
   return reactionScore + commentScore + replyScore;
 }
 
+function getCategoryEmoji(category: CategoryFilter) {
+  if (category === "All") return "🌎";
+  if (category === "Educational") return "📘";
+  if (category === "Entertainment") return "🎬";
+  if (category === "Social") return "👥";
+  if (category === "Sales & Marketing") return "📣";
+  if (category === "Random Thoughts") return "💭";
+  return "📍";
+}
+
 export function FeedScreen({
   posts,
   selectedArea,
@@ -46,11 +66,12 @@ export function FeedScreen({
   onOpenPost,
   currentUserId,
   onDeletePost,
-onReportPost,
-onMessagePost,
+  onReportPost,
+  onMessagePost,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   const filteredPosts = useMemo(() => {
     let areaPosts = posts.filter((post) => post.location === selectedArea);
@@ -74,11 +95,125 @@ onMessagePost,
         contentContainerStyle={styles.feedList}
         ListHeaderComponent={
           <>
-            <View style={styles.heroCard}>
-              <Text style={styles.heroKicker}>Now peaking in</Text>
-              <Text style={styles.heroTitle}>{selectedArea}</Text>
-              <Text style={styles.heroText}>
-                See what people nearby are talking about. Post anonymously or with your username.
+            <Pressable style={styles.searchPill} onPress={() => setTab("search")}>
+              <Text style={styles.searchPillText}>
+                🔍 Search or change city · {selectedArea}
+              </Text>
+            </Pressable>
+
+            <View style={{ marginBottom: 16 }}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeaderTitle}>Popular feeds</Text>
+
+                <Pressable onPress={() => setShowAllCategories(!showAllCategories)}>
+                  <Text style={styles.sectionHeaderLink}>
+                    {showAllCategories ? "Collapse" : "Expand"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {showAllCategories ? (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                  {categoryFilters.map((category) => {
+                    const active = categoryFilter === category;
+                    const color = categoryColors[category];
+
+                    return (
+                      <Pressable
+                        key={category}
+                        onPress={() => setCategoryFilter(category)}
+                        style={[
+                          styles.feedCategoryCard,
+                          {
+                            backgroundColor: color,
+                            borderColor: active ? "#FFFFFF" : color,
+                            borderWidth: active ? 3 : 1,
+                            marginRight: 0,
+                          },
+                        ]}
+                      >
+                        <Text style={{ fontSize: 21 }}>{getCategoryEmoji(category)}</Text>
+
+                        <Text
+                          numberOfLines={2}
+                          style={[
+                            styles.feedCategoryText,
+                            {
+                              color:
+                                color === "#F8B400" || color === "#86B5CF"
+                                  ? "#003B57"
+                                  : "#FFFFFF",
+                            },
+                          ]}
+                        >
+                          {category}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                  contentContainerStyle={{
+                    paddingRight: 24,
+                  }}
+                >
+                  {categoryFilters.map((category) => {
+                    const active = categoryFilter === category;
+                    const color = categoryColors[category];
+
+                    return (
+                      <Pressable
+                        key={category}
+                        onPress={() => setCategoryFilter(category)}
+                        style={[
+                          styles.feedCategoryCard,
+                          {
+                            backgroundColor: color,
+                            borderColor: active ? "#FFFFFF" : color,
+                            borderWidth: active ? 3 : 1,
+                          },
+                        ]}
+                      >
+                        <Text style={{ fontSize: 21 }}>{getCategoryEmoji(category)}</Text>
+
+                        <Text
+                          numberOfLines={2}
+                          style={[
+                            styles.feedCategoryText,
+                            {
+                              color:
+                                color === "#F8B400" || color === "#86B5CF"
+                                  ? "#003B57"
+                                  : "#FFFFFF",
+                            },
+                          ]}
+                        >
+                          {category}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
+            </View>
+
+            <View style={styles.feedHeroBanner}>
+              <View style={styles.heroCircleYellow} />
+              <View style={styles.heroCircleOrange} />
+
+              <Text style={styles.feedHeroKicker}>CITYPEAK LOCAL</Text>
+
+              <Text style={styles.feedHeroTitle}>
+                What’s happening in {selectedArea}?
+              </Text>
+
+              <Text style={styles.feedHeroText}>
+                Share local thoughts, events, questions, videos, and updates with people nearby.
               </Text>
             </View>
 
@@ -118,31 +253,7 @@ onMessagePost,
               </Pressable>
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryFilterRow}
-            >
-              {categoryFilters.map((category) => (
-                <Pressable
-                  key={category}
-                  style={[
-                    styles.categoryFilterChip,
-                    categoryFilter === category && styles.categoryFilterChipActive,
-                  ]}
-                  onPress={() => setCategoryFilter(category)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryFilterText,
-                      categoryFilter === category && styles.categoryFilterTextActive,
-                    ]}
-                  >
-                    {category === "All" ? "🌎 All" : category}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            <Text style={styles.localPostsTitle}>Local posts</Text>
           </>
         }
         ListEmptyComponent={
@@ -156,15 +267,15 @@ onMessagePost,
           </View>
         }
         renderItem={({ item }) => (
-         <PostCard
-  post={item}
-  onReact={onReact}
-  onOpen={() => onOpenPost(item)}
-  currentUserId={currentUserId}
-  onDeletePost={onDeletePost}
-  onReportPost={onReportPost}
-  onMessagePost={() => onMessagePost(item)}
-/>
+          <PostCard
+            post={item}
+            onReact={onReact}
+            onOpen={() => onOpenPost(item)}
+            currentUserId={currentUserId}
+            onDeletePost={onDeletePost}
+            onReportPost={onReportPost}
+            onMessagePost={() => onMessagePost(item)}
+          />
         )}
       />
 

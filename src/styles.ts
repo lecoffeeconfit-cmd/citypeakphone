@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#030712",
+    backgroundColor: "#0F172A",
     paddingTop: 18,
   },
 
@@ -16,31 +16,30 @@ export const styles = StyleSheet.create({
   },
 
   logo: {
-    color: "#F8FAFC",
-    fontSize: 38,
+    color: "#003B57",
+    fontSize: 36,
     fontWeight: "900",
-    letterSpacing: -1.5,
+    letterSpacing: -1.2,
   },
 
   subtitle: {
-    color: "#8B5CF6",
+    color: "#329BB8",
     marginTop: 3,
-    fontWeight: "900",
-    letterSpacing: 0.4,
+    fontWeight: "800",
   },
 
   headerPill: {
-    backgroundColor: "#111827",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#22D3EE",
+    borderColor: "#D8EAF2",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 18,
+    borderRadius: 999,
     maxWidth: 150,
   },
 
   headerPillText: {
-    color: "#22D3EE",
+    color: "#003B57",
     fontWeight: "900",
   },
 
@@ -49,55 +48,153 @@ export const styles = StyleSheet.create({
     paddingBottom: 130,
   },
 
-  heroCard: {
-    backgroundColor: "#0B1020",
-    padding: 24,
-    borderRadius: 38,
+  searchPill: {
+    backgroundColor: "#1E293B",
+    borderRadius: 999,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#312E81",
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.3,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    borderColor: "#D8EAF2",
+  },
+
+  searchPillText: {
+    color: "#D1D5DB",
+    fontWeight: "800",
+  },
+
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  sectionHeaderTitle: {
+    color: "#111827",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  sectionHeaderLink: {
+    color: "#329BB8",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  feedCategoryCard: {
+    width: 150,
+    height: 88,
+    borderRadius: 20,
+    padding: 12,
+    marginRight: 10,
+    borderWidth: 1,
+    justifyContent: "space-between",
+  },
+
+  feedCategoryText: {
+    fontWeight: "900",
+    fontSize: 13,
+    lineHeight: 16,
+  },
+
+  feedHeroBanner: {
+    backgroundColor: "#1E3A5F",
+    borderRadius: 28,
+    padding: 22,
+    marginBottom: 18,
+    overflow: "hidden",
+  },
+
+  heroCircleYellow: {
+    position: "absolute",
+    right: -40,
+    top: -30,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "#F8B400",
+    opacity: 0.5,
+  },
+
+  heroCircleOrange: {
+    position: "absolute",
+    left: -35,
+    bottom: -45,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: "#F58A00",
+    opacity: 0.35,
+  },
+
+  feedHeroKicker: {
+    color: "white",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  feedHeroTitle: {
+    color: "white",
+    fontWeight: "900",
+    fontSize: 30,
+    marginTop: 8,
+    letterSpacing: -1,
+  },
+
+  feedHeroText: {
+    color: "#EAF6FA",
+    fontWeight: "700",
+    marginTop: 8,
+    lineHeight: 21,
+  },
+
+  localPostsTitle: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 18,
+    marginBottom: 12,
+  },
+
+  heroCard: {
+    backgroundColor: "#1E293B",
+    padding: 24,
+    borderRadius: 30,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   heroKicker: {
-    color: "#22D3EE",
+    color: "#329BB8",
     fontSize: 12,
     fontWeight: "900",
     textTransform: "uppercase",
-    letterSpacing: 1.8,
+    letterSpacing: 1.4,
   },
 
   heroTitle: {
-    color: "#F8FAFC",
-    fontSize: 38,
+    color: "#111827",
+    fontSize: 34,
     fontWeight: "900",
     marginTop: 6,
-    letterSpacing: -1.4,
+    letterSpacing: -1,
   },
 
   heroText: {
-    color: "#A5B4FC",
+    color: "#64748B",
     marginTop: 10,
     lineHeight: 23,
     fontWeight: "700",
   },
 
   postCard: {
-    backgroundColor: "#090E1D",
-    padding: 17,
-    borderRadius: 36,
+    backgroundColor: "#1E293B",
+    padding: 18,
+    borderRadius: 28,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#1E3A8A",
-    shadowColor: "#22D3EE",
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 7,
+    borderColor: "#E5E7EB",
   },
 
   postHeader: {
@@ -108,41 +205,41 @@ export const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 50,
-    height: 50,
+    width: 54,
+    height: 54,
     borderRadius: 18,
-    backgroundColor: "#22D3EE",
+    backgroundColor: "#329BB8",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#A78BFA",
+    borderColor: "#86B5CF",
   },
 
   avatarText: {
-    color: "#020617",
+    color: "#FFFFFF",
     fontWeight: "900",
   },
 
   author: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
     fontSize: 15,
   },
 
   location: {
-    color: "#818CF8",
+    color: "#329BB8",
     fontSize: 12,
     marginTop: 3,
     fontWeight: "800",
   },
 
   more: {
-    color: "#818CF8",
+    color: "#64748B",
     fontWeight: "900",
   },
 
   postText: {
-    color: "#F8FAFC",
+    color: "#1F2937",
     fontSize: 16,
     lineHeight: 25,
     marginBottom: 15,
@@ -152,9 +249,9 @@ export const styles = StyleSheet.create({
   postImage: {
     width: "100%",
     height: 250,
-    borderRadius: 30,
+    borderRadius: 24,
     marginBottom: 15,
-    backgroundColor: "#111827",
+    backgroundColor: "#E5E7EB",
   },
 
   reactionRow: {
@@ -164,30 +261,30 @@ export const styles = StyleSheet.create({
   },
 
   reaction: {
-    backgroundColor: "#111827",
+    backgroundColor: "#F4F6F8",
     paddingVertical: 9,
     paddingHorizontal: 13,
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   reactionText: {
-    color: "#E0E7FF",
+    color: "#003B57",
     fontWeight: "900",
   },
 
   commentButton: {
-    backgroundColor: "#22D3EE",
+    backgroundColor: "#329BB8",
     paddingVertical: 10,
     paddingHorizontal: 15,
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#67E8F9",
+    borderColor: "#329BB8",
   },
 
   commentButtonText: {
-    color: "#020617",
+    color: "#1E293B",
     fontWeight: "900",
   },
 
@@ -195,26 +292,19 @@ export const styles = StyleSheet.create({
     position: "absolute",
     right: 22,
     bottom: 102,
-    width: 66,
-    height: 66,
-    borderRadius: 22,
-    backgroundColor: "#8B5CF6",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F58A00",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#8B5CF6",
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
-    transform: [{ rotate: "8deg" }],
   },
 
   floatingButtonText: {
-    color: "white",
-    fontSize: 40,
+    color: "#1E293B",
+    fontSize: 38,
     fontWeight: "800",
-    marginTop: -5,
-    transform: [{ rotate: "-8deg" }],
+    marginTop: -4,
   },
 
   screen: {
@@ -224,88 +314,83 @@ export const styles = StyleSheet.create({
   },
 
   screenTitle: {
-    color: "#F8FAFC",
-    fontSize: 32,
+    color: "#111827",
+    fontSize: 30,
     fontWeight: "900",
     marginBottom: 6,
-    letterSpacing: -1,
+    letterSpacing: -0.8,
   },
 
   screenSubtext: {
-    color: "#A5B4FC",
+    color: "#64748B",
     marginBottom: 16,
     lineHeight: 22,
     fontWeight: "700",
   },
 
   input: {
-    backgroundColor: "#090E1D",
-    color: "#F8FAFC",
+    backgroundColor: "#1E293B",
+    color: "#111827",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
     marginBottom: 12,
-    fontWeight: "800",
+    fontWeight: "700",
   },
 
   textArea: {
-    backgroundColor: "#090E1D",
-    color: "#F8FAFC",
+    backgroundColor: "#1E293B",
+    color: "#111827",
     minHeight: 190,
     padding: 16,
-    borderRadius: 30,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
     textAlignVertical: "top",
     fontSize: 16,
     fontWeight: "700",
   },
 
   primaryButton: {
-    backgroundColor: "#22D3EE",
+    backgroundColor: "#329BB8",
     padding: 17,
-    borderRadius: 24,
+    borderRadius: 22,
     alignItems: "center",
     marginTop: 12,
-    shadowColor: "#22D3EE",
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 7,
   },
 
   primaryButtonText: {
-    color: "#020617",
+    color: "#1E293B",
     fontWeight: "900",
     fontSize: 16,
   },
 
   secondaryButton: {
-    backgroundColor: "#111827",
+    backgroundColor: "#1E293B",
     padding: 16,
-    borderRadius: 24,
+    borderRadius: 22,
     alignItems: "center",
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   secondaryButtonText: {
-    color: "#E0E7FF",
+    color: "#003B57",
     fontWeight: "900",
   },
 
   previewImage: {
     width: "100%",
     height: 225,
-    borderRadius: 30,
+    borderRadius: 24,
     marginTop: 14,
-    backgroundColor: "#111827",
+    backgroundColor: "#E5E7EB",
   },
 
   smallTitle: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
     marginTop: 24,
     marginBottom: 10,
@@ -319,77 +404,72 @@ export const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#090E1D",
+    backgroundColor: "#1E293B",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   chipText: {
-    color: "#E0E7FF",
+    color: "#003B57",
     fontWeight: "900",
   },
 
   switchRow: {
     marginTop: 18,
     padding: 15,
-    borderRadius: 26,
-    backgroundColor: "#090E1D",
+    borderRadius: 22,
+    backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
   switchLabel: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
   },
 
   switchHelp: {
-    color: "#A5B4FC",
+    color: "#64748B",
     fontSize: 12,
     marginTop: 3,
     fontWeight: "700",
   },
 
   profileCard: {
-    backgroundColor: "#090E1D",
+    backgroundColor: "#1E293B",
     padding: 26,
-    borderRadius: 38,
+    borderRadius: 30,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#312E81",
-    shadowColor: "#8B5CF6",
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 7,
+    borderColor: "#E5E7EB",
   },
 
   profileAvatar: {
-    width: 98,
-    height: 98,
-    borderRadius: 28,
-    backgroundColor: "#22D3EE",
+    width: 96,
+    height: 96,
+    borderRadius: 30,
+    backgroundColor: "#329BB8",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: "#A78BFA",
+    borderColor: "#86B5CF",
   },
 
   profileAvatarText: {
-    color: "#020617",
+    color: "#1E293B",
     fontSize: 36,
     fontWeight: "900",
   },
 
   profileName: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontSize: 24,
     fontWeight: "900",
   },
@@ -401,120 +481,111 @@ export const styles = StyleSheet.create({
   },
 
   statBox: {
-    backgroundColor: "#111827",
-    borderRadius: 24,
+    backgroundColor: "#F4F6F8",
+    borderRadius: 20,
     padding: 14,
     minWidth: 82,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   statNumber: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
     fontSize: 18,
   },
 
   statLabel: {
-    color: "#A5B4FC",
+    color: "#64748B",
     fontSize: 12,
     marginTop: 3,
     fontWeight: "800",
   },
 
   muted: {
-    color: "#A5B4FC",
+    color: "#64748B",
     textAlign: "center",
     marginTop: 6,
     fontWeight: "700",
   },
 
   emptyCard: {
-    backgroundColor: "#090E1D",
+    backgroundColor: "#1E293B",
     padding: 25,
-    borderRadius: 30,
+    borderRadius: 24,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
   },
 
   emptyTitle: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontSize: 21,
     fontWeight: "900",
   },
 
   bottomNav: {
     position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 15,
-    backgroundColor: "#070B16",
-    borderRadius: 26,
+    left: 16,
+    right: 16,
+    bottom: 16,
+    backgroundColor: "#1E293B",
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: "#312E81",
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    borderColor: "#D8EAF2",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     flexDirection: "row",
     justifyContent: "space-around",
-    shadowColor: "#22D3EE",
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    alignItems: "center",
+    zIndex: 999,
+    elevation: 20,
   },
 
   navButton: {
     alignItems: "center",
     justifyContent: "center",
     minWidth: 58,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 20,
   },
 
   navButtonActive: {
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 66,
-    paddingVertical: 7,
+    minWidth: 64,
+    paddingVertical: 8,
     paddingHorizontal: 5,
-    borderRadius: 22,
-    backgroundColor: "#111827",
-    borderWidth: 1,
-    borderColor: "#22D3EE",
+    borderRadius: 20,
+    backgroundColor: "#F8B400",
   },
 
   navIconBubble: {
     width: 30,
     height: 30,
-    borderRadius: 11,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
 
   navIconBubbleActive: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#22D3EE",
-    shadowColor: "#22D3EE",
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 6,
+    backgroundColor: "#1E293B",
   },
 
   navIcon: {
-    color: "#64748B",
+    color: "#D1D5DB",
     fontSize: 18,
     fontWeight: "900",
   },
 
   navIconActive: {
-    color: "#020617",
+    color: "#003B57",
     fontSize: 20,
     fontWeight: "900",
   },
@@ -526,20 +597,20 @@ export const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#F43F5E",
+    backgroundColor: "#F58A00",
     borderWidth: 1,
-    borderColor: "#020617",
+    borderColor: "#1E293B",
   },
 
   navItem: {
-    color: "#64748B",
+    color: "#D1D5DB",
     fontWeight: "900",
     fontSize: 10,
     marginTop: 3,
   },
 
   navItemActive: {
-    color: "#22D3EE",
+    color: "#003B57",
     fontWeight: "900",
     fontSize: 10,
     marginTop: 3,
@@ -547,18 +618,18 @@ export const styles = StyleSheet.create({
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(3, 7, 18, 0.86)",
+    backgroundColor: "rgba(17, 24, 39, 0.45)",
     justifyContent: "flex-end",
   },
 
   modalSheet: {
     maxHeight: "92%",
-    backgroundColor: "#030712",
-    borderTopLeftRadius: 38,
-    borderTopRightRadius: 38,
+    backgroundColor: "#F4F6F8",
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   modalHeader: {
@@ -569,57 +640,57 @@ export const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontSize: 23,
     fontWeight: "900",
   },
 
   closeButton: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontSize: 22,
     fontWeight: "900",
   },
 
   emptyCommentCard: {
-    backgroundColor: "#090E1D",
-    borderRadius: 24,
+    backgroundColor: "#1E293B",
+    borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
   },
 
   commentCard: {
-    backgroundColor: "#090E1D",
-    borderRadius: 24,
+    backgroundColor: "#1E293B",
+    borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
     marginBottom: 10,
   },
 
   commentAuthor: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
     marginBottom: 5,
   },
 
   commentText: {
-    color: "#E0E7FF",
+    color: "#1F2937",
     lineHeight: 20,
     fontWeight: "700",
   },
 
   commentComposer: {
-    backgroundColor: "#090E1D",
-    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
     marginTop: 16,
   },
 
   commentInput: {
-    color: "#F8FAFC",
+    color: "#111827",
     padding: 10,
   },
 
@@ -631,47 +702,47 @@ export const styles = StyleSheet.create({
   },
 
   sendButton: {
-    backgroundColor: "#22D3EE",
+    backgroundColor: "#329BB8",
     paddingVertical: 11,
     paddingHorizontal: 17,
-    borderRadius: 16,
+    borderRadius: 999,
   },
 
   sendButtonText: {
-    color: "#020617",
+    color: "#FFFFFF",
     fontWeight: "900",
   },
 
   previewCommentCard: {
-    backgroundColor: "#111827",
-    borderRadius: 22,
+    backgroundColor: "#F4F6F8",
+    borderRadius: 20,
     padding: 11,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
   },
 
   previewCommentMeta: {
-    color: "#A5B4FC",
+    color: "#64748B",
     fontSize: 12,
     marginTop: 6,
     fontWeight: "800",
   },
 
   viewMoreComments: {
-    color: "#22D3EE",
+    color: "#329BB8",
     fontWeight: "900",
     marginTop: 10,
   },
 
   replyCard: {
-    backgroundColor: "#111827",
-    borderRadius: 22,
+    backgroundColor: "#F4F6F8",
+    borderRadius: 20,
     padding: 10,
     marginLeft: 18,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#E5E7EB",
   },
 
   commentActionRow: {
@@ -681,81 +752,81 @@ export const styles = StyleSheet.create({
   },
 
   commentActionText: {
-    color: "#22D3EE",
+    color: "#329BB8",
     fontWeight: "900",
     fontSize: 12,
   },
 
   feedToggleRow: {
     flexDirection: "row",
-    backgroundColor: "#090E1D",
-    borderRadius: 20,
+    backgroundColor: "#1E293B",
+    borderRadius: 999,
     padding: 5,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
   },
 
   feedToggleButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: 999,
     alignItems: "center",
   },
 
   feedToggleButtonActive: {
-    backgroundColor: "#22D3EE",
+    backgroundColor: "#329BB8",
   },
 
   feedToggleText: {
-    color: "#A5B4FC",
+    color: "#64748B",
     fontWeight: "900",
   },
 
   feedToggleTextActive: {
-    color: "#020617",
+    color: "#FFFFFF",
   },
 
   profilePhoto: {
-    width: 98,
-    height: 98,
-    borderRadius: 28,
-    backgroundColor: "#111827",
+    width: 96,
+    height: 96,
+    borderRadius: 30,
+    backgroundColor: "#E5E7EB",
     marginBottom: 12,
     borderWidth: 3,
-    borderColor: "#22D3EE",
+    borderColor: "#86B5CF",
   },
 
   profileBioInput: {
-    backgroundColor: "#090E1D",
-    color: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
+    color: "#111827",
     minHeight: 110,
     padding: 15,
-    borderRadius: 26,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
     textAlignVertical: "top",
     marginBottom: 12,
     fontWeight: "700",
   },
 
   uploadingCard: {
-    backgroundColor: "#090E1D",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#22D3EE",
-    borderRadius: 26,
+    borderColor: "#F8B400",
+    borderRadius: 22,
     padding: 14,
     marginTop: 14,
   },
 
   uploadingText: {
-    color: "#F8FAFC",
+    color: "#111827",
     fontWeight: "900",
     textAlign: "center",
   },
 
   uploadingSubtext: {
-    color: "#A5B4FC",
+    color: "#64748B",
     fontSize: 12,
     textAlign: "center",
     marginTop: 5,
@@ -768,22 +839,22 @@ export const styles = StyleSheet.create({
   },
 
   categoryFilterChip: {
-    backgroundColor: "#090E1D",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#312E81",
+    borderColor: "#D8EAF2",
     paddingVertical: 11,
     paddingHorizontal: 15,
-    borderRadius: 16,
+    borderRadius: 999,
     marginRight: 10,
   },
 
   categoryFilterChipActive: {
-    backgroundColor: "#8B5CF6",
-    borderColor: "#A78BFA",
+    backgroundColor: "#329BB8",
+    borderColor: "#329BB8",
   },
 
   categoryFilterText: {
-    color: "#C7D2FE",
+    color: "#64748B",
     fontWeight: "900",
   },
 

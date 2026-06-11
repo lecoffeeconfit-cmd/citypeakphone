@@ -1,3 +1,4 @@
+import "./global.css";
 import React, { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, Text, View } from "react-native";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
