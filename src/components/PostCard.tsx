@@ -49,32 +49,23 @@ export function PostCard({
         "Are you sure you want to delete this post? This cannot be undone."
       );
 
-      if (confirmed) {
-        onDeletePost?.(post.id);
-      }
-
+      if (confirmed) onDeletePost?.(post.id);
       return;
     }
 
-    Alert.alert(
-      "Delete post?",
-      "Are you sure you want to delete this post? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => onDeletePost?.(post.id),
-        },
-      ]
-    );
+    Alert.alert("Delete post?", "Are you sure you want to delete this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => onDeletePost?.(post.id),
+      },
+    ]);
   }
 
   function openReportOptions() {
     if (Platform.OS === "web") {
-      const reason = window.prompt(
-        "Why are you reporting this post?\n\nType one reason:\nSpam\nHarassment\nFake post\nInappropriate content"
-      );
+      const reason = window.prompt("Why are you reporting this post?");
 
       if (reason && reason.trim()) {
         onReportPost?.(post.id, reason.trim());
@@ -86,14 +77,8 @@ export function PostCard({
     Alert.alert("Report post", "Why are you reporting this post?", [
       { text: "Cancel", style: "cancel" },
       { text: "Spam", onPress: () => onReportPost?.(post.id, "Spam") },
-      {
-        text: "Harassment",
-        onPress: () => onReportPost?.(post.id, "Harassment"),
-      },
-      {
-        text: "Fake post",
-        onPress: () => onReportPost?.(post.id, "Fake post"),
-      },
+      { text: "Harassment", onPress: () => onReportPost?.(post.id, "Harassment") },
+      { text: "Fake post", onPress: () => onReportPost?.(post.id, "Fake post") },
       {
         text: "Inappropriate",
         style: "destructive",
@@ -104,18 +89,21 @@ export function PostCard({
 
   return (
     <View style={styles.postCard}>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 14,
-        }}
-      >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {post.anonymous
-              ? "?"
-              : post.author.replace("@", "")[0]?.toUpperCase()}
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+        <View
+          style={{
+            width: 58,
+            height: 58,
+            borderRadius: 29,
+            backgroundColor: "#0F172A",
+            borderWidth: 1,
+            borderColor: "#334155",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#CBD5E1", fontSize: 24, fontWeight: "900" }}>
+            {post.anonymous ? "👤" : post.author.replace("@", "")[0]?.toUpperCase()}
           </Text>
         </View>
 
@@ -128,20 +116,16 @@ export function PostCard({
 
         <View
           style={{
-            backgroundColor: post.anonymous ? "#F8B400" : "#329BB8",
+            backgroundColor: post.anonymous ? "#0F172A" : "#329BB8",
             borderRadius: 999,
             paddingVertical: 7,
-            paddingHorizontal: 11,
+            paddingHorizontal: 12,
+            borderWidth: 1,
+            borderColor: post.anonymous ? "#334155" : "#329BB8",
           }}
         >
-          <Text
-            style={{
-              color: post.anonymous ? "#003B57" : "#FFFFFF",
-              fontWeight: "900",
-              fontSize: 11,
-            }}
-          >
-            {post.anonymous ? "ANON" : "LOCAL"}
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 11 }}>
+            {post.anonymous ? "Anonymous" : "Local"}
           </Text>
         </View>
       </View>
@@ -150,16 +134,16 @@ export function PostCard({
         <View
           style={{
             alignSelf: "flex-start",
-            backgroundColor: "#EAF6FA",
+            backgroundColor: "#0F172A",
             borderWidth: 1,
-            borderColor: "#86B5CF",
+            borderColor: "#334155",
             paddingVertical: 7,
             paddingHorizontal: 11,
             borderRadius: 999,
             marginBottom: 12,
           }}
         >
-          <Text style={{ color: "#003B57", fontWeight: "900", fontSize: 12 }}>
+          <Text style={{ color: "#CBD5E1", fontWeight: "900", fontSize: 12 }}>
             #{post.category}
           </Text>
         </View>
@@ -173,7 +157,7 @@ export function PostCard({
             borderRadius: 24,
             overflow: "hidden",
             borderWidth: 1,
-            borderColor: "#D8EAF2",
+            borderColor: "#334155",
             marginBottom: 15,
           }}
         >
@@ -185,7 +169,15 @@ export function PostCard({
         <Image source={{ uri: post.imageUri }} style={styles.postImage} />
       )}
 
-      <View style={styles.reactionRow}>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 10,
+          marginTop: 6,
+        }}
+      >
         {reactionButtons.map((reaction) => (
           <Pressable
             key={reaction.key}
@@ -197,17 +189,7 @@ export function PostCard({
             </Text>
           </Pressable>
         ))}
-      </View>
 
-      <View
-        style={{
-          height: 1,
-          backgroundColor: "#D8EAF2",
-          marginVertical: 14,
-        }}
-      />
-
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <Pressable style={styles.commentButton} onPress={onOpen}>
           <Text style={styles.commentButtonText}>
             💬 Comments {post.comments.length}
@@ -226,7 +208,7 @@ export function PostCard({
             style={{
               backgroundColor: "#DC2626",
               paddingVertical: 10,
-              paddingHorizontal: 15,
+              paddingHorizontal: 17,
               borderRadius: 999,
             }}
           >
@@ -236,15 +218,15 @@ export function PostCard({
           <Pressable
             onPress={openReportOptions}
             style={{
-              backgroundColor: "#F4F6F8",
+              backgroundColor: "#0F172A",
               paddingVertical: 10,
               paddingHorizontal: 15,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "#D8EAF2",
+              borderColor: "#334155",
             }}
           >
-            <Text style={{ color: "#003B57", fontWeight: "900" }}>Report</Text>
+            <Text style={{ color: "#CBD5E1", fontWeight: "900" }}>Report</Text>
           </Pressable>
         )}
       </View>

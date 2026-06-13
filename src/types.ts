@@ -36,8 +36,9 @@ export type Comment = {
   author: string;
   text: string;
   likes?: number;
-  replies?: CommentReply[];
-  createdAt?: any;
+  dislikes?: number;
+  replies?: Comment[];
+  createdAt: number | string | any;
 };
 
 export type Post = {

@@ -63,9 +63,7 @@ export function ProfileScreen({
 
         <Text style={styles.profileName}>@{username || "username"}</Text>
 
-        <Text style={styles.muted}>
-          Tap your photo to change it.
-        </Text>
+        <Text style={styles.muted}>Tap your photo to change it.</Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
@@ -92,7 +90,7 @@ export function ProfileScreen({
         value={username}
         onChangeText={setUsername}
         placeholder="Username"
-        placeholderTextColor="#64748B"
+        placeholderTextColor="#94A3B8"
         autoCapitalize="none"
       />
 
@@ -103,7 +101,7 @@ export function ProfileScreen({
         value={bio}
         onChangeText={setBio}
         placeholder="Tell people about yourself..."
-        placeholderTextColor="#64748B"
+        placeholderTextColor="#94A3B8"
         multiline
       />
 

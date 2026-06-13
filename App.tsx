@@ -10,7 +10,7 @@ import {
   doc,
   getDoc,
   increment,
-    onSnapshot,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -51,7 +51,7 @@ export default function App() {
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [startingMessageUserId, setStartingMessageUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -100,28 +100,39 @@ const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
     return unsubscribe;
   }, [currentUser]);
   useEffect(() => {
-  if (!currentUser) return;
+    if (!selectedPost) return;
 
-  const q = query(
-    collection(db, "messages"),
-    where("participants", "array-contains", currentUser.uid)
-  );
+    const updatedPost = posts.find(
+      (post) => post.id === selectedPost.id
+    );
 
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const unreadCount = snapshot.docs.filter((messageDoc) => {
-      const data = messageDoc.data();
+    if (updatedPost) {
+      setSelectedPost(updatedPost);
+    }
+  }, [posts]);
+  useEffect(() => {
+    if (!currentUser) return;
 
-      return (
-        data.fromUid !== currentUser.uid &&
-        !(data.readBy ?? []).includes(currentUser.uid)
-      );
-    }).length;
+    const q = query(
+      collection(db, "messages"),
+      where("participants", "array-contains", currentUser.uid)
+    );
 
-    setUnreadMessagesCount(unreadCount);
-  });
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const unreadCount = snapshot.docs.filter((messageDoc) => {
+        const data = messageDoc.data();
 
-  return unsubscribe;
-}, [currentUser]);
+        return (
+          data.fromUid !== currentUser.uid &&
+          !(data.readBy ?? []).includes(currentUser.uid)
+        );
+      }).length;
+
+      setUnreadMessagesCount(unreadCount);
+    });
+
+    return unsubscribe;
+  }, [currentUser]);
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
     const response = await fetch(uri);
@@ -188,63 +199,63 @@ const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   }
 
   async function addPost(
-  text: string,
-  anonymous: boolean,
-  mediaUri?: string,
-  mediaType?: MediaType,
-  category?: PostCategory
-) {
-  if (!currentUser) return;
+    text: string,
+    anonymous: boolean,
+    mediaUri?: string,
+    mediaType?: MediaType,
+    category?: PostCategory
+  ) {
+    if (!currentUser) return;
 
-  if (!category) {
-    alert("Please choose a category.");
-    return;
-  }
-
-  setPostingStatus(
-    mediaType === "video"
-      ? "🎥 Posting your video..."
-      : "📝 Posting..."
-  );
-
-  setTab("feed");
-
-  let uploadedMediaUrl = "";
-
-  try {
-    if (mediaUri) {
-      const result = await uploadMediaToSupabase(mediaUri, mediaType);
-
-      if (result) {
-        uploadedMediaUrl = result;
-      }
+    if (!category) {
+      alert("Please choose a category.");
+      return;
     }
 
-    await addDoc(collection(db, "posts"), {
-      uid: currentUser.uid,
-      username,
-      author: anonymous ? "Anonymous" : `@${username}`,
-      anonymous,
-      text,
-      location: selectedArea,
-      category,
-      imageUri: uploadedMediaUrl,
-      mediaType: mediaType || "",
-      reactions: { fire: 0, heart: 0, laugh: 0, wow: 0 },
-      comments: [],
-      createdAt: serverTimestamp(),
-    });
+    setPostingStatus(
+      mediaType === "video"
+        ? "🎥 Posting your video..."
+        : "📝 Posting..."
+    );
 
-    setPostingStatus("✅ Posted!");
+    setTab("feed");
 
-    setTimeout(() => {
+    let uploadedMediaUrl = "";
+
+    try {
+      if (mediaUri) {
+        const result = await uploadMediaToSupabase(mediaUri, mediaType);
+
+        if (result) {
+          uploadedMediaUrl = result;
+        }
+      }
+
+      await addDoc(collection(db, "posts"), {
+        uid: currentUser.uid,
+        username,
+        author: anonymous ? "Anonymous" : `@${username}`,
+        anonymous,
+        text,
+        location: selectedArea,
+        category,
+        imageUri: uploadedMediaUrl,
+        mediaType: mediaType || "",
+        reactions: { fire: 0, heart: 0, laugh: 0, wow: 0, dislike: 0 },
+        comments: [],
+        createdAt: serverTimestamp(),
+      });
+
+      setPostingStatus("✅ Posted!");
+
+      setTimeout(() => {
+        setPostingStatus("");
+      }, 2500);
+    } catch (error: any) {
       setPostingStatus("");
-    }, 2500);
-  } catch (error: any) {
-    setPostingStatus("");
-    alert(error.message || "Post failed.");
+      alert(error.message || "Post failed.");
+    }
   }
-}
 
   async function reactToPost(postId: string, reaction: ReactionKey) {
     const postRef = doc(db, "posts", postId);
@@ -253,170 +264,240 @@ const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
       [`reactions.${reaction}`]: increment(1),
     });
   }
- async function deletePost(postId: string) {
-  try {
-    alert("Delete button clicked");
+  async function deletePost(postId: string) {
+    try {
+      alert("Delete button clicked");
 
-    await deleteDoc(doc(db, "posts", postId));
+      await deleteDoc(doc(db, "posts", postId));
 
-    alert("Post deleted");
-  } catch (error: any) {
-    console.log(error);
-    alert(error.message);
+      alert("Post deleted");
+    } catch (error: any) {
+      console.log(error);
+      alert(error.message);
+    }
   }
-}
-async function reportPost(postId: string, reason: string) {
-  if (!currentUser) return;
+  async function reportPost(postId: string, reason: string) {
+    if (!currentUser) return;
 
-  const targetPost = posts.find((post) => post.id === postId);
+    const targetPost = posts.find((post) => post.id === postId);
 
-  if (!targetPost) {
-    alert("Post not found.");
-    return;
-  }
+    if (!targetPost) {
+      alert("Post not found.");
+      return;
+    }
 
-  if (targetPost.uid === currentUser.uid) {
-    alert("You cannot report your own post.");
-    return;
-  }
+    if (targetPost.uid === currentUser.uid) {
+      alert("You cannot report your own post.");
+      return;
+    }
 
-  await addDoc(collection(db, "reports"), {
-    type: "post",
-    postId,
-    postText: targetPost.text || "",
-    postOwnerUid: targetPost.uid || "",
-    postAuthor: targetPost.author || "",
-    reportedByUid: currentUser.uid,
-    reportedByUsername: username,
-    reason,
-    status: "open",
-    createdAt: serverTimestamp(),
-  });
+    await addDoc(collection(db, "reports"), {
+      type: "post",
+      postId,
+      postText: targetPost.text || "",
+      postOwnerUid: targetPost.uid || "",
+      postAuthor: targetPost.author || "",
+      reportedByUid: currentUser.uid,
+      reportedByUsername: username,
+      reason,
+      status: "open",
+      createdAt: serverTimestamp(),
+    });
 
-  alert("Report submitted. Thank you for helping keep CityPeak safe.");
-}
-
-async function reportComment(postId: string, commentId: string, reason: string) {
-  if (!currentUser) return;
-
-  const targetPost = posts.find((post) => post.id === postId);
-
-  if (!targetPost) {
-    alert("Post not found.");
-    return;
+    alert("Report submitted. Thank you for helping keep CityPeak safe.");
   }
 
-  const targetComment = targetPost.comments.find(
-    (comment) => comment.id === commentId
-  );
+  async function reportComment(postId: string, commentId: string, reason: string) {
+    if (!currentUser) return;
 
-  if (!targetComment) {
-    alert("Comment not found.");
-    return;
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost) {
+      alert("Post not found.");
+      return;
+    }
+
+    const targetComment = targetPost.comments.find(
+      (comment) => comment.id === commentId
+    );
+
+    if (!targetComment) {
+      alert("Comment not found.");
+      return;
+    }
+
+    if (targetComment.uid === currentUser.uid) {
+      alert("You cannot report your own comment.");
+      return;
+    }
+
+    await addDoc(collection(db, "reports"), {
+      type: "comment",
+      postId,
+      commentId,
+      commentText: targetComment.text || "",
+      commentAuthor: targetComment.author || "",
+      commentOwnerUid: targetComment.uid || "",
+      reportedByUid: currentUser.uid,
+      reportedByUsername: username,
+      reason,
+      status: "open",
+      createdAt: serverTimestamp(),
+    });
+
+    alert("Comment report submitted.");
   }
 
-  if (targetComment.uid === currentUser.uid) {
-    alert("You cannot report your own comment.");
-    return;
+  async function deleteComment(postId: string, commentId: string) {
+    if (!currentUser) return;
+
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost) {
+      alert("Post not found.");
+      return;
+    }
+
+    const targetComment = targetPost.comments.find(
+      (comment) => comment.id === commentId
+    );
+
+    if (!targetComment) {
+      alert("Comment not found.");
+      return;
+    }
+
+    const isOwner =
+      targetComment.uid === currentUser.uid ||
+      targetComment.author === `@${username}`;
+
+    if (!isOwner) {
+      alert("You can only delete your own comments.");
+      return;
+    }
+
+    const updatedComments = targetPost.comments.filter(
+      (comment) => comment.id !== commentId
+    );
+
+    await updateDoc(doc(db, "posts", postId), {
+      comments: updatedComments,
+    });
+
+    alert("Comment deleted.");
   }
-
-  await addDoc(collection(db, "reports"), {
-    type: "comment",
-    postId,
-    commentId,
-    commentText: targetComment.text || "",
-    commentAuthor: targetComment.author || "",
-    commentOwnerUid: targetComment.uid || "",
-    reportedByUid: currentUser.uid,
-    reportedByUsername: username,
-    reason,
-    status: "open",
-    createdAt: serverTimestamp(),
-  });
-
-  alert("Comment report submitted.");
-}
-
-async function deleteComment(postId: string, commentId: string) {
-  if (!currentUser) return;
-
-  const targetPost = posts.find((post) => post.id === postId);
-
-  if (!targetPost) {
-    alert("Post not found.");
-    return;
-  }
-
-  const targetComment = targetPost.comments.find(
-    (comment) => comment.id === commentId
-  );
-
-  if (!targetComment) {
-    alert("Comment not found.");
-    return;
-  }
-
-  const isOwner =
-    targetComment.uid === currentUser.uid ||
-    targetComment.author === `@${username}`;
-
-  if (!isOwner) {
-    alert("You can only delete your own comments.");
-    return;
-  }
-
-  const updatedComments = targetPost.comments.filter(
-    (comment) => comment.id !== commentId
-  );
-
-  await updateDoc(doc(db, "posts", postId), {
-    comments: updatedComments,
-  });
-
-  alert("Comment deleted.");
-}
 
 
 
   async function addComment(postId: string, text: string, anonymous: boolean) {
-  if (!currentUser) return;
+    if (!currentUser) return;
 
-  const newComment: Comment = {
-    id: Date.now().toString(),
-    uid: currentUser.uid,
-    username,
-    author: anonymous ? "Anonymous" : `@${username}`,
-    text,
-    likes: 0,
-    replies: [],
-    createdAt: Date.now(),
-  };
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      uid: currentUser.uid,
+      username,
+      author: anonymous ? "Anonymous" : `@${username}`,
+      text,
+      likes: 0,
+      dislikes: 0,
+      replies: [],
+      createdAt: Date.now(),
+    };
 
-  const postRef = doc(db, "posts", postId);
+    const postRef = doc(db, "posts", postId);
 
-  await updateDoc(postRef, {
-    comments: arrayUnion(newComment),
-  });
-}
+    await updateDoc(postRef, {
+      comments: arrayUnion(newComment),
+    });
+  }
+
+  function updateNestedCommentLike(
+    comments: Comment[],
+    commentId: string
+  ): Comment[] {
+    return comments.map((comment) => {
+      if (comment.id === commentId) {
+        return {
+          ...comment,
+          likes: (comment.likes ?? 0) + 1,
+          replies: comment.replies ?? [],
+        };
+      }
+
+      return {
+        ...comment,
+        replies: updateNestedCommentLike(
+          comment.replies ?? [],
+          commentId
+        ),
+      };
+    });
+  }
 
   async function likeComment(postId: string, commentId: string) {
     const targetPost = posts.find((post) => post.id === postId);
     if (!targetPost) return;
 
-    const updatedComments = targetPost.comments.map((comment) => {
-      if (comment.id !== commentId) return comment;
+    const updatedComments = updateNestedCommentLike(
+      targetPost.comments ?? [],
+      commentId
+    );
+
+    await updateDoc(doc(db, "posts", postId), {
+      comments: updatedComments,
+    });
+  }
+  function updateNestedCommentDislike(
+    comments: Comment[],
+    commentId: string
+  ): Comment[] {
+    return comments.map((comment) => {
+      if (comment.id === commentId) {
+        return {
+          ...comment,
+          dislikes: (comment.dislikes ?? 0) + 1,
+          replies: comment.replies ?? [],
+        };
+      }
 
       return {
         ...comment,
-        likes: (comment.likes ?? 0) + 1,
-        replies: comment.replies ?? [],
+        replies: updateNestedCommentDislike(comment.replies ?? [], commentId),
       };
     });
+  }
 
-    const postRef = doc(db, "posts", postId);
+  async function dislikeComment(postId: string, commentId: string) {
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) return;
 
-    await updateDoc(postRef, {
+    const updatedComments = updateNestedCommentDislike(
+      targetPost.comments ?? [],
+      commentId
+    );
+
+    await updateDoc(doc(db, "posts", postId), {
       comments: updatedComments,
+    });
+  }
+
+  function addNestedReply(
+    comments: Comment[],
+    parentCommentId: string,
+    newReply: Comment
+  ): Comment[] {
+    return comments.map((comment) => {
+      if (comment.id === parentCommentId) {
+        return {
+          ...comment,
+          replies: [...(comment.replies ?? []), newReply],
+        };
+      }
+
+      return {
+        ...comment,
+        replies: addNestedReply(comment.replies ?? [], parentCommentId, newReply),
+      };
     });
   }
 
@@ -431,50 +512,48 @@ async function deleteComment(postId: string, commentId: string) {
     const targetPost = posts.find((post) => post.id === postId);
     if (!targetPost) return;
 
-    const newReply = {
+    const newReply: Comment = {
       id: Date.now().toString(),
+      uid: currentUser.uid,
+      username,
       author: anonymous ? "Anonymous" : `@${username}`,
       text,
       likes: 0,
+      dislikes: 0,
+      replies: [],
       createdAt: Date.now(),
     };
 
-    const updatedComments = targetPost.comments.map((comment) => {
-      if (comment.id !== commentId) return comment;
+    const updatedComments = addNestedReply(
+      targetPost.comments ?? [],
+      commentId,
+      newReply
+    );
 
-      return {
-        ...comment,
-        likes: comment.likes ?? 0,
-        replies: [...(comment.replies ?? []), newReply],
-      };
-    });
-
-    const postRef = doc(db, "posts", postId);
-
-    await updateDoc(postRef, {
+    await updateDoc(doc(db, "posts", postId), {
       comments: updatedComments,
     });
   }
 
   function startMessageFromPost(post: Post) {
-  if (!post.uid) {
-    alert("This user cannot be messaged.");
-    return;
-  }
+    if (!post.uid) {
+      alert("This user cannot be messaged.");
+      return;
+    }
 
-  if (post.anonymous) {
-    alert("Anonymous posts cannot be messaged.");
-    return;
-  }
+    if (post.anonymous) {
+      alert("Anonymous posts cannot be messaged.");
+      return;
+    }
 
-  if (post.uid === currentUser?.uid) {
-    alert("You cannot message yourself.");
-    return;
-  }
+    if (post.uid === currentUser?.uid) {
+      alert("You cannot message yourself.");
+      return;
+    }
 
-  setStartingMessageUserId(post.uid);
-  setTab("messages");
-}
+    setStartingMessageUserId(post.uid);
+    setTab("messages");
+  }
 
   async function handleLogout() {
     await signOut(auth);
@@ -492,7 +571,7 @@ async function deleteComment(postId: string, commentId: string) {
   }
 
   if (!currentUser) {
-    return <AuthScreen onAuthSuccess={() => {}} />;
+    return <AuthScreen onAuthSuccess={() => { }} />;
   }
 
   return (
@@ -510,55 +589,55 @@ async function deleteComment(postId: string, commentId: string) {
         <Pressable style={styles.headerPill} onPress={() => setTab("search")}>
           <Text style={styles.headerPillText}>{selectedArea}</Text>
         </Pressable>
-     </View>
+      </View>
 
-{postingStatus !== "" && (
-  <View
-    style={{
-      marginHorizontal: 20,
-      marginBottom: 12,
-      backgroundColor: "#0F172A",
-      borderWidth: 1,
-      borderColor: "#2563EB",
-      borderRadius: 18,
-      padding: 12,
-    }}
-  >
-    <Text
-      style={{
-        color: "white",
-        fontWeight: "900",
-        textAlign: "center",
-      }}
-    >
-      {postingStatus}
-    </Text>
+      {postingStatus !== "" && (
+        <View
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 12,
+            backgroundColor: "#0F172A",
+            borderWidth: 1,
+            borderColor: "#2563EB",
+            borderRadius: 18,
+            padding: 12,
+          }}
+        >
+          <Text
+            style={{
+              color: "white",
+              fontWeight: "900",
+              textAlign: "center",
+            }}
+          >
+            {postingStatus}
+          </Text>
 
-    <Text
-      style={{
-        color: "#94A3B8",
-        fontSize: 12,
-        textAlign: "center",
-        marginTop: 4,
-      }}
-    >
-      Keep CityPeak open while upload finishes.
-    </Text>
-  </View>
-)}
+          <Text
+            style={{
+              color: "#94A3B8",
+              fontSize: 12,
+              textAlign: "center",
+              marginTop: 4,
+            }}
+          >
+            Keep CityPeak open while upload finishes.
+          </Text>
+        </View>
+      )}
 
-{tab === "feed" && (
+      {tab === "feed" && (
         <FeedScreen
-  posts={posts}
-  selectedArea={selectedArea}
-  setTab={setTab}
-  onReact={reactToPost}
-  onOpenPost={setSelectedPost}
-  currentUserId={currentUser.uid}
-  onDeletePost={deletePost}
-  onReportPost={reportPost}
-  onMessagePost={startMessageFromPost}
-/>
+          posts={posts}
+          selectedArea={selectedArea}
+          setTab={setTab}
+          onReact={reactToPost}
+          onOpenPost={setSelectedPost}
+          currentUserId={currentUser.uid}
+          onDeletePost={deletePost}
+          onReportPost={reportPost}
+          onMessagePost={startMessageFromPost}
+        />
       )}
 
       {tab === "search" && (
@@ -567,6 +646,7 @@ async function deleteComment(postId: string, commentId: string) {
           setSearch={setSearch}
           setSelectedArea={setSelectedArea}
           setTab={setTab}
+          posts={posts}
         />
       )}
 
@@ -574,33 +654,15 @@ async function deleteComment(postId: string, commentId: string) {
         <CreatePostScreen addPost={addPost} selectedArea={selectedArea} />
       )}
 
-{tab === "messages" && (
-  <MessagesScreen
-    currentUser={currentUser}
-    username={username}
-    startingUserId={startingMessageUserId}
-  />
-)}
+      {tab === "messages" && (
+        <MessagesScreen
+          currentUser={currentUser}
+          username={username}
+          startingUserId={startingMessageUserId}
+        />
+      )}
 
-{tab === "profile" && (
-  <View style={{ flex: 1 }}>
-    <ProfileScreen
-      username={username}
-      setUsername={setUsername}
-      bio={bio}
-      setBio={setBio}
-      photoUrl={photoUrl}
-      onSaveProfile={saveProfile}
-    />
 
-    <Pressable
-      style={[styles.secondaryButton, { marginHorizontal: 20 }]}
-      onPress={handleLogout}
-    >
-      <Text style={styles.secondaryButtonText}>Log Out</Text>
-    </Pressable>
-  </View>
-)}
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
           <ProfileScreen
@@ -621,24 +683,25 @@ async function deleteComment(postId: string, commentId: string) {
         </View>
       )}
 
-<BottomNav
-  tab={tab}
-  setTab={setTab}
-  unreadMessagesCount={unreadMessagesCount}
-/>
+      <BottomNav
+        tab={tab}
+        setTab={setTab}
+        unreadMessagesCount={unreadMessagesCount}
+      />
       <PostDetailsModal
-  post={selectedPost}
-  onClose={() => setSelectedPost(null)}
-  onReact={reactToPost}
-  onAddComment={addComment}
-  onLikeComment={likeComment}
-  onAddReply={addReply}
-  currentUserId={currentUser?.uid}
-  onDeletePost={deletePost}
-  onReportPost={reportPost}
-  onReportComment={reportComment}
-  onDeleteComment={deleteComment}
-/>
+        post={selectedPost}
+        onClose={() => setSelectedPost(null)}
+        onReact={reactToPost}
+        onAddComment={addComment}
+        onLikeComment={likeComment}
+        onAddReply={addReply}
+        currentUserId={currentUser?.uid}
+        onDeletePost={deletePost}
+        onReportPost={reportPost}
+        onReportComment={reportComment}
+        onDeleteComment={deleteComment}
+        onDislikeComment={dislikeComment}
+      />
     </SafeAreaView>
   );
 }

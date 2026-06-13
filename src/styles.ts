@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   },
 
   logo: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontSize: 36,
     fontWeight: "900",
     letterSpacing: -1.2,
@@ -29,19 +29,20 @@ export const styles = StyleSheet.create({
   },
 
   headerPill: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,
     maxWidth: 150,
   },
 
-  headerPillText: {
-    color: "#003B57",
-    fontWeight: "900",
-  },
+ headerPillText: {
+  color: "#FFFFFF",
+  fontWeight: "900",
+  fontSize: 16,
+},
 
   feedList: {
     paddingHorizontal: 18,
@@ -55,7 +56,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
   },
 
   searchPillText: {
@@ -71,7 +72,7 @@ export const styles = StyleSheet.create({
   },
 
   sectionHeaderTitle: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontWeight: "900",
     fontSize: 16,
   },
@@ -162,7 +163,7 @@ export const styles = StyleSheet.create({
     borderRadius: 30,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
   },
 
   heroKicker: {
@@ -174,7 +175,7 @@ export const styles = StyleSheet.create({
   },
 
   heroTitle: {
-    color: "#111827",
+     color: "#FFFFFF",
     fontSize: 34,
     fontWeight: "900",
     marginTop: 6,
@@ -194,7 +195,7 @@ export const styles = StyleSheet.create({
     borderRadius: 28,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
   },
 
   postHeader: {
@@ -221,13 +222,13 @@ export const styles = StyleSheet.create({
   },
 
   author: {
-    color: "#111827",
+   color: "#FFFFFF",
     fontWeight: "900",
     fontSize: 15,
   },
 
   location: {
-    color: "#329BB8",
+    color: "#86B5CF",
     fontSize: 12,
     marginTop: 3,
     fontWeight: "800",
@@ -239,7 +240,7 @@ export const styles = StyleSheet.create({
   },
 
   postText: {
-    color: "#1F2937",
+    color: "#E2E8F0",
     fontSize: 16,
     lineHeight: 25,
     marginBottom: 15,
@@ -261,16 +262,16 @@ export const styles = StyleSheet.create({
   },
 
   reaction: {
-    backgroundColor: "#F4F6F8",
+    backgroundColor: "#0F172A",
     paddingVertical: 9,
     paddingHorizontal: 13,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
   },
 
   reactionText: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontWeight: "900",
   },
 
@@ -314,7 +315,7 @@ export const styles = StyleSheet.create({
   },
 
   screenTitle: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontSize: 30,
     fontWeight: "900",
     marginBottom: 6,
@@ -329,24 +330,24 @@ export const styles = StyleSheet.create({
   },
 
   input: {
-    backgroundColor: "#1E293B",
-    color: "#111827",
+  backgroundColor: "#1E293B",
+  color: "#FFFFFF",
     padding: 16,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     marginBottom: 12,
     fontWeight: "700",
   },
 
   textArea: {
     backgroundColor: "#1E293B",
-    color: "#111827",
+    color: "#FFFFFF",
     minHeight: 190,
     padding: 16,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     textAlignVertical: "top",
     fontSize: 16,
     fontWeight: "700",
@@ -373,11 +374,11 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
   },
 
   secondaryButtonText: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontWeight: "900",
   },
 
@@ -390,7 +391,7 @@ export const styles = StyleSheet.create({
   },
 
   smallTitle: {
-    color: "#111827",
+  color: "#FFFFFF",
     fontWeight: "900",
     marginTop: 24,
     marginBottom: 10,
@@ -409,11 +410,11 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
   },
 
   chipText: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontWeight: "900",
   },
 
@@ -423,14 +424,14 @@ export const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
   switchLabel: {
-    color: "#111827",
+   color: "#FFFFFF",
     fontWeight: "900",
   },
 
@@ -447,7 +448,7 @@ export const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
   },
 
   profileAvatar: {
@@ -469,7 +470,7 @@ export const styles = StyleSheet.create({
   },
 
   profileName: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontSize: 24,
     fontWeight: "900",
   },
@@ -481,27 +482,27 @@ export const styles = StyleSheet.create({
   },
 
   statBox: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 20,
-    padding: 14,
-    minWidth: 82,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D8EAF2",
-  },
+  backgroundColor: "#0F172A",
+  borderRadius: 20,
+  padding: 14,
+  minWidth: 82,
+  alignItems: "center",
+  borderWidth: 1,
+  borderColor: "#334155",
+},
 
-  statNumber: {
-    color: "#111827",
-    fontWeight: "900",
-    fontSize: 18,
-  },
+statNumber: {
+  color: "#FFFFFF",
+  fontWeight: "900",
+  fontSize: 18,
+},
 
-  statLabel: {
-    color: "#64748B",
-    fontSize: 12,
-    marginTop: 3,
-    fontWeight: "800",
-  },
+statLabel: {
+  color: "#CBD5E1",
+  fontSize: 12,
+  marginTop: 3,
+  fontWeight: "800",
+},
 
   muted: {
     color: "#64748B",
@@ -516,11 +517,11 @@ export const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
   },
 
   emptyTitle: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontSize: 21,
     fontWeight: "900",
   },
@@ -533,7 +534,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#1E293B",
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+   borderColor: "#334155",
     paddingVertical: 10,
     paddingHorizontal: 8,
     flexDirection: "row",
@@ -585,7 +586,7 @@ export const styles = StyleSheet.create({
   },
 
   navIconActive: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontSize: 20,
     fontWeight: "900",
   },
@@ -610,7 +611,7 @@ export const styles = StyleSheet.create({
   },
 
   navItemActive: {
-    color: "#003B57",
+    color: "#FFFFFF",
     fontWeight: "900",
     fontSize: 10,
     marginTop: 3,
@@ -623,13 +624,13 @@ export const styles = StyleSheet.create({
   },
 
   modalSheet: {
-    maxHeight: "92%",
-    backgroundColor: "#F4F6F8",
+  maxHeight: "92%",
+  backgroundColor: "#0F172A",
     borderTopLeftRadius: 34,
     borderTopRightRadius: 34,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
   },
 
   modalHeader: {
@@ -639,14 +640,14 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  modalTitle: {
-    color: "#111827",
+ modalTitle: {
+  color: "#FFFFFF",
     fontSize: 23,
     fontWeight: "900",
   },
 
   closeButton: {
-    color: "#111827",
+  color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "900",
   },
@@ -656,7 +657,7 @@ export const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
   },
 
   commentCard: {
@@ -664,33 +665,35 @@ export const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginBottom: 10,
+    borderColor: "#334155",
+    marginTop: 12,
+marginBottom: 12,
   },
 
   commentAuthor: {
-    color: "#111827",
-    fontWeight: "900",
-    marginBottom: 5,
-  },
+  color: "#FFFFFF",
+  fontWeight: "800",
+  fontSize: 15,
+  marginBottom: 4,
+},
 
   commentText: {
-    color: "#1F2937",
-    lineHeight: 20,
-    fontWeight: "700",
-  },
+  color: "#E2E8F0",
+  fontSize: 15,
+  marginBottom: 8,
+},
 
-  commentComposer: {
-    backgroundColor: "#FFFFFF",
+ commentComposer: {
+  backgroundColor: "#1E293B",
     borderRadius: 24,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#334155",
     marginTop: 16,
   },
 
   commentInput: {
-    color: "#111827",
+  color: "#FFFFFF",
     padding: 10,
   },
 
@@ -713,21 +716,20 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  previewCommentCard: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 20,
-    padding: 11,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+ previewCommentCard: {
+  backgroundColor: "#1E293B",
+  borderRadius: 16,
+  padding: 14,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: "#334155",
+},
 
   previewCommentMeta: {
-    color: "#64748B",
-    fontSize: 12,
-    marginTop: 6,
-    fontWeight: "800",
-  },
+  color: "#94A3B8",
+  fontSize: 12,
+  fontWeight: "600",
+},
 
   viewMoreComments: {
     color: "#329BB8",
@@ -736,14 +738,15 @@ export const styles = StyleSheet.create({
   },
 
   replyCard: {
-    backgroundColor: "#F4F6F8",
-    borderRadius: 20,
-    padding: 10,
-    marginLeft: 18,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  backgroundColor: "#0F172A",
+  borderRadius: 16,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  marginLeft: 18,
+  marginTop: 8,
+  borderWidth: 1,
+  borderColor: "#334155",
+},
 
   commentActionRow: {
     flexDirection: "row",
@@ -764,7 +767,7 @@ export const styles = StyleSheet.create({
     padding: 5,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+   borderColor: "#334155",
   },
 
   feedToggleButton: {
@@ -798,13 +801,13 @@ export const styles = StyleSheet.create({
   },
 
   profileBioInput: {
-    backgroundColor: "#FFFFFF",
-    color: "#111827",
+  backgroundColor: "#1E293B",
+  color: "#FFFFFF",
     minHeight: 110,
     padding: 15,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     textAlignVertical: "top",
     marginBottom: 12,
     fontWeight: "700",
@@ -820,7 +823,7 @@ export const styles = StyleSheet.create({
   },
 
   uploadingText: {
-    color: "#111827",
+    color: "#FFFFFF",
     fontWeight: "900",
     textAlign: "center",
   },
@@ -841,7 +844,7 @@ export const styles = StyleSheet.create({
   categoryFilterChip: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#D8EAF2",
+    borderColor: "#334155",
     paddingVertical: 11,
     paddingHorizontal: 15,
     borderRadius: 999,
@@ -861,4 +864,23 @@ export const styles = StyleSheet.create({
   categoryFilterTextActive: {
     color: "#FFFFFF",
   },
+
+replyAuthor: {
+  color: "#FFFFFF",
+  fontWeight: "800",
+  fontSize: 14,
+  marginBottom: 4,
+},
+
+replyText: {
+  color: "#E2E8F0",
+  fontSize: 15,
+  marginBottom: 6,
+},
+
+replyMeta: {
+  color: "#94A3B8",
+  fontSize: 12,
+  fontWeight: "600",
+},
 });
