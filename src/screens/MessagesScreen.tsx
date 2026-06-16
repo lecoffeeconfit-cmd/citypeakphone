@@ -10,6 +10,8 @@ import {
 import type { User } from "firebase/auth";
 import {
   addDoc,
+  arrayRemove,
+arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -44,9 +46,9 @@ type Message = {
   toUsername: string;
   text: string;
   participants: string[];
- reactions?: Record<string, string>;
-readBy?: string[];
-createdAt?: any;
+  reactions?: Record<string, string>;
+  readBy?: string[];
+  createdAt?: any;
 };
 
 function getMessageDate(createdAt: any) {
@@ -75,11 +77,24 @@ export function MessagesScreen({
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
-const [messageText, setMessageText] = useState("");
-const [userSearch, setUserSearch] = useState("");
-const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [activeReactionMessageId, setActiveReactionMessageId] = useState<
+    string | null
+  >(null);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
 
-const messagesListRef = useRef<FlatList>(null);
+  const messagesListRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (userDoc) => {
+      const data = userDoc.data();
+      setBlockedUserIds(data?.blockedUserIds ?? []);
+    });
+
+    return unsubscribe;
+  }, [currentUser.uid]);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
       const loadedUsers: AppUser[] = snapshot.docs
@@ -121,17 +136,20 @@ const messagesListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     if (!startingUserId || users.length === 0) return;
+    if (blockedUserIds.includes(startingUserId)) return;
 
     const foundUser = users.find((user) => user.uid === startingUserId);
 
     if (foundUser) {
       setSelectedUser(foundUser);
     }
-  }, [startingUserId, users]);
+  }, [startingUserId, users, blockedUserIds]);
 
   const messages = selectedUser
-    ? allMessages.filter((message) =>
-        message.participants.includes(selectedUser.uid)
+    ? allMessages.filter(
+        (message) =>
+          message.participants.includes(selectedUser.uid) &&
+          !blockedUserIds.includes(selectedUser.uid)
       )
     : [];
 
@@ -141,6 +159,8 @@ const messagesListRef = useRef<FlatList>(null);
     allMessages.forEach((message) => {
       const otherUid =
         message.fromUid === currentUser.uid ? message.toUid : message.fromUid;
+
+      
 
       const foundUser = users.find((user) => user.uid === otherUid);
 
@@ -165,27 +185,64 @@ const messagesListRef = useRef<FlatList>(null);
         getMessageDate(b.lastMessage.createdAt).getTime() -
         getMessageDate(a.lastMessage.createdAt).getTime()
     );
-  }, [allMessages, users, currentUser.uid]);
+  }, [allMessages, users, currentUser.uid, blockedUserIds]);
 
   function getUnreadCountForUser(userId: string) {
-  return allMessages.filter(
-    (message) =>
-      message.fromUid === userId &&
-      message.toUid === currentUser.uid &&
-      !(message.readBy ?? []).includes(currentUser.uid)
-  ).length;
-}
+    if (blockedUserIds.includes(userId)) return 0;
+
+    return allMessages.filter(
+      (message) =>
+        message.fromUid === userId &&
+        message.toUid === currentUser.uid &&
+        !(message.readBy ?? []).includes(currentUser.uid)
+    ).length;
+  }
+
   const cleanedSearch = userSearch.trim().toLowerCase();
 
   const searchedUsers =
     cleanedSearch.length === 0
       ? []
-      : users.filter((user) =>
-          user.username?.toLowerCase().includes(cleanedSearch)
-        );
+      : users.filter(
+  (user) =>
+    user.username?.toLowerCase().includes(cleanedSearch)
+);
+
+  async function blockSelectedUser() {
+  if (!selectedUser) return;
+
+  const confirmBlock = window.confirm(
+    `Block @${selectedUser.username}? You will no longer see messages from this user.`
+  );
+
+  if (!confirmBlock) return;
+
+  await updateDoc(doc(db, "users", currentUser.uid), {
+    blockedUserIds: arrayUnion(selectedUser.uid),
+  });
+
+  setSelectedUser(null);
+  alert(`@${selectedUser.username} has been blocked.`);
+}
+
+  async function unblockSelectedUser() {
+  if (!selectedUser) return;
+
+  await updateDoc(doc(db, "users", currentUser.uid), {
+    blockedUserIds: arrayRemove(selectedUser.uid),
+  });
+
+  Alert.alert("User unblocked", `@${selectedUser.username} has been unblocked.`);
+}
+
 
   async function sendMessage() {
     if (!selectedUser) return;
+
+    if (blockedUserIds.includes(selectedUser.uid)) {
+      Alert.alert("User blocked", "Unblock this user before messaging them.");
+      return;
+    }
 
     const cleanedText = messageText.trim();
 
@@ -197,16 +254,16 @@ const messagesListRef = useRef<FlatList>(null);
     setMessageText("");
 
     await addDoc(collection(db, "messages"), {
-  fromUid: currentUser.uid,
-  toUid: selectedUser.uid,
-  fromUsername: username,
-  toUsername: selectedUser.username,
-  text: cleanedText,
-  participants: [currentUser.uid, selectedUser.uid],
-reactions: {},
-readBy: [currentUser.uid],
-createdAt: serverTimestamp(),
-});
+      fromUid: currentUser.uid,
+      toUid: selectedUser.uid,
+      fromUsername: username,
+      toUsername: selectedUser.username,
+      text: cleanedText,
+      participants: [currentUser.uid, selectedUser.uid],
+      reactions: {},
+      readBy: [currentUser.uid],
+      createdAt: serverTimestamp(),
+    });
   }
 
   async function deleteMessage(messageId: string) {
@@ -221,71 +278,99 @@ createdAt: serverTimestamp(),
       },
     ]);
   }
+
   async function reactToMessage(messageId: string, emoji: string) {
-  await updateDoc(doc(db, "messages", messageId), {
-    [`reactions.${currentUser.uid}`]: emoji,
-  });
+    await updateDoc(doc(db, "messages", messageId), {
+      [`reactions.${currentUser.uid}`]: emoji,
+    });
 
-  setActiveReactionMessageId(null);
-}
-async function markConversationRead(userId: string) {
-  const unreadMessages = allMessages.filter(
-    (message) =>
-      message.fromUid === userId &&
-      message.toUid === currentUser.uid &&
-      !(message.readBy ?? []).includes(currentUser.uid)
-  );
+    setActiveReactionMessageId(null);
+  }
 
-  await Promise.all(
-    unreadMessages.map((message) =>
-      updateDoc(doc(db, "messages", message.id), {
-        readBy: [...(message.readBy ?? []), currentUser.uid],
-      })
-    )
-  );
-}
+  async function markConversationRead(userId: string) {
+    if (blockedUserIds.includes(userId)) return;
+
+    const unreadMessages = allMessages.filter(
+      (message) =>
+        message.fromUid === userId &&
+        message.toUid === currentUser.uid &&
+        !(message.readBy ?? []).includes(currentUser.uid)
+    );
+
+    await Promise.all(
+      unreadMessages.map((message) =>
+        updateDoc(doc(db, "messages", message.id), {
+          readBy: [...(message.readBy ?? []), currentUser.uid],
+        })
+      )
+    );
+  }
 
   if (selectedUser) {
     return (
       <View style={styles.screen}>
-        <Pressable onPress={() => setSelectedUser(null)}>
-          <Text style={{ color: "#60A5FA", fontWeight: "900", marginBottom: 12 }}>
-            ← Back to messages
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+  <Pressable onPress={() => setSelectedUser(null)}>
+    <Text style={{ color: "#60A5FA", fontWeight: "900" }}>
+      ← Back to messages
+    </Text>
+  </Pressable>
 
-        <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
-          Chat with @{selectedUser.username}
-        </Text>
+  <Pressable
+  onPress={
+    blockedUserIds.includes(selectedUser.uid)
+      ? unblockSelectedUser
+      : blockSelectedUser
+  }
+  style={{
+    backgroundColor: blockedUserIds.includes(selectedUser.uid)
+      ? "#166534"
+      : "#7F1D1D",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    zIndex: 99999,
+    elevation: 99999,
+    position: "relative",
+  }}
+>
+  <Text style={{ color: "white", fontWeight: "900" }}>
+    {blockedUserIds.includes(selectedUser.uid) ? "✅ Unblock" : "🚫 Block User"}
+  </Text>
+</Pressable>
+</View>
 
-       <FlatList
-  ref={messagesListRef}
-  data={messages}
-  keyExtractor={(item) => item.id}
-  style={{ flex: 1, marginTop: 16 }}
+       <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
+  Chat with @{selectedUser.username}
+</Text>
 
-onContentSizeChange={() => {
-  setTimeout(() => {
-    messagesListRef.current?.scrollToEnd({
-      animated: true,
-    });
-  }, 10);
-}}
 
-renderItem={({ item }) => {
+        <FlatList
+          ref={messagesListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          style={{ flex: 1, marginTop: 16, zIndex: 1 }}
+          onContentSizeChange={() => {
+            setTimeout(() => {
+              messagesListRef.current?.scrollToEnd({
+                animated: true,
+              });
+            }, 10);
+          }}
+          renderItem={({ item }) => {
             const isMine = item.fromUid === currentUser.uid;
 
             return (
               <Pressable
-  onPress={() =>
-    setActiveReactionMessageId(
-      activeReactionMessageId === item.id ? null : item.id
-    )
-  }
-  onLongPress={() => {
-    if (isMine) deleteMessage(item.id);
-  }}
-  style={{
+                onPress={() =>
+                  setActiveReactionMessageId(
+                    activeReactionMessageId === item.id ? null : item.id
+                  )
+                }
+                onLongPress={() => {
+                  if (isMine) deleteMessage(item.id);
+                }}
+                style={{
                   alignSelf: isMine ? "flex-end" : "flex-start",
                   backgroundColor: isMine ? "#2563EB" : "#1E293B",
                   padding: 12,
@@ -298,41 +383,44 @@ renderItem={({ item }) => {
                   {item.text}
                 </Text>
 
-               <Text
-  style={{
-    color: isMine ? "#BFDBFE" : "#94A3B8",
-    fontSize: 11,
-    marginTop: 5,
-  }}
->
-  {formatMessageTime(item.createdAt)}
-  {isMine ? " · Hold to delete" : ""}
-</Text>
+                <Text
+                  style={{
+                    color: isMine ? "#BFDBFE" : "#94A3B8",
+                    fontSize: 11,
+                    marginTop: 5,
+                  }}
+                >
+                  {formatMessageTime(item.createdAt)}
+                  {isMine ? " · Hold to delete" : ""}
+                </Text>
 
-{item.reactions && Object.values(item.reactions).length > 0 && (
-  <Text style={{ marginTop: 6, fontSize: 16 }}>
-    {Object.values(item.reactions).join(" ")}
-  </Text>
-)}
+                {item.reactions && Object.values(item.reactions).length > 0 && (
+                  <Text style={{ marginTop: 6, fontSize: 16 }}>
+                    {Object.values(item.reactions).join(" ")}
+                  </Text>
+                )}
 
-{activeReactionMessageId === item.id && (
-  <View
-    style={{
-      flexDirection: "row",
-      gap: 6,
-      marginTop: 8,
-      backgroundColor: "#020617",
-      padding: 6,
-      borderRadius: 999,
-    }}
-  >
-    {["❤️", "😂", "🔥", "😮", "👍"].map((emoji) => (
-      <Pressable key={emoji} onPress={() => reactToMessage(item.id, emoji)}>
-        <Text style={{ fontSize: 18 }}>{emoji}</Text>
-      </Pressable>
-    ))}
-  </View>
-)}
+                {activeReactionMessageId === item.id && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 6,
+                      marginTop: 8,
+                      backgroundColor: "#020617",
+                      padding: 6,
+                      borderRadius: 999,
+                    }}
+                  >
+                    {["❤️", "😂", "🔥", "😮", "👍"].map((emoji) => (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => reactToMessage(item.id, emoji)}
+                      >
+                        <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </Pressable>
             );
           }}
@@ -345,13 +433,13 @@ renderItem={({ item }) => {
 
         <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
           <TextInput
-  value={messageText}
-  onChangeText={setMessageText}
-  onSubmitEditing={sendMessage}
-  returnKeyType="send"
-  placeholder="Type a message..."
-  placeholderTextColor="#64748B"
-  style={{
+            value={messageText}
+            onChangeText={setMessageText}
+            onSubmitEditing={sendMessage}
+            returnKeyType="send"
+            placeholder="Type a message..."
+            placeholderTextColor="#64748B"
+            style={{
               flex: 1,
               backgroundColor: "#0F172A",
               color: "white",
@@ -412,10 +500,10 @@ renderItem={({ item }) => {
           renderItem={({ item }) => (
             <Pressable
               onPress={() => {
-  setSelectedUser(item);
-  setUserSearch("");
-  markConversationRead(item.uid);
-}}
+                setSelectedUser(item);
+                setUserSearch("");
+                markConversationRead(item.uid);
+              }}
               style={{
                 backgroundColor: "#0F172A",
                 borderWidth: 1,
@@ -434,7 +522,6 @@ renderItem={({ item }) => {
               </Text>
             </Pressable>
           )}
-          
           ListEmptyComponent={
             <Text style={{ color: "#94A3B8", marginTop: 20 }}>
               No matching users found.
@@ -448,9 +535,9 @@ renderItem={({ item }) => {
           renderItem={({ item }) => (
             <Pressable
               onPress={() => {
-  setSelectedUser(item.user);
-  markConversationRead(item.user.uid);
-}}
+                setSelectedUser(item.user);
+                markConversationRead(item.user.uid);
+              }}
               style={{
                 backgroundColor: "#0F172A",
                 borderWidth: 1,
@@ -461,31 +548,28 @@ renderItem={({ item }) => {
               }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-  <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
-    @{item.user.username}
-  </Text>
+                <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
+                  @{item.user.username}
+                </Text>
 
-  {getUnreadCountForUser(item.user.uid) > 0 && (
-    <Text
-      style={{
-        color: "white",
-        backgroundColor: "#DC2626",
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 999,
-        fontWeight: "900",
-        overflow: "hidden",
-      }}
-    >
-      {getUnreadCountForUser(item.user.uid)}
-    </Text>
-  )}
-</View>
+                {getUnreadCountForUser(item.user.uid) > 0 && (
+                  <Text
+                    style={{
+                      color: "white",
+                      backgroundColor: "#DC2626",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 999,
+                      fontWeight: "900",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {getUnreadCountForUser(item.user.uid)}
+                  </Text>
+                )}
+              </View>
 
-              <Text
-                numberOfLines={1}
-                style={{ color: "#94A3B8", marginTop: 4 }}
-              >
+              <Text numberOfLines={1} style={{ color: "#94A3B8", marginTop: 4 }}>
                 {item.lastMessage.fromUid === currentUser.uid ? "You: " : ""}
                 {item.lastMessage.text}
               </Text>
