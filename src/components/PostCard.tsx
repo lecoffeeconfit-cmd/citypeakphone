@@ -63,12 +63,20 @@ export function PostCard({
     ]);
   }
 
+  function submitReport(reason: string) {
+  const cleanedReason = reason.trim();
+
+  if (!cleanedReason) return;
+
+  onReportPost?.(post.id, cleanedReason);
+}
+
   function openReportOptions() {
     if (Platform.OS === "web") {
       const reason = window.prompt("Why are you reporting this post?");
 
       if (reason && reason.trim()) {
-        onReportPost?.(post.id, reason.trim());
+        submitReport(reason);
       }
 
       return;
@@ -76,13 +84,13 @@ export function PostCard({
 
     Alert.alert("Report post", "Why are you reporting this post?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Spam", onPress: () => onReportPost?.(post.id, "Spam") },
-      { text: "Harassment", onPress: () => onReportPost?.(post.id, "Harassment") },
-      { text: "Fake post", onPress: () => onReportPost?.(post.id, "Fake post") },
+      { text: "Spam", onPress: () => submitReport("Spam") },
+      { text: "Harassment", onPress: () => submitReport("Harassment") },
+      { text: "Fake post", onPress: () => submitReport("Fake post") },
       {
         text: "Inappropriate",
         style: "destructive",
-        onPress: () => onReportPost?.(post.id, "Inappropriate content"),
+        onPress: () => submitReport("Inappropriate content"),
       },
     ]);
   }

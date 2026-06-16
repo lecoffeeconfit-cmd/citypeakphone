@@ -30,6 +30,7 @@ import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { MessagesScreen } from "./src/screens/MessagesScreen";
+
 import { styles } from "./src/styles";
 import type {
   Comment,
@@ -665,14 +666,15 @@ export default function App() {
 
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
-          <ProfileScreen
-            username={username}
-            setUsername={setUsername}
-            bio={bio}
-            setBio={setBio}
-            photoUrl={photoUrl}
-            onSaveProfile={saveProfile}
-          />
+         <ProfileScreen
+  username={username}
+  setUsername={setUsername}
+  bio={bio}
+  setBio={setBio}
+  photoUrl={photoUrl}
+  onSaveProfile={saveProfile}
+  onLogout={() => signOut(auth)}
+/>
 
           <Pressable
             style={[styles.secondaryButton, { marginHorizontal: 20 }]}

@@ -883,4 +883,18 @@ replyMeta: {
   fontSize: 12,
   fontWeight: "600",
 },
+
+logoutButton: {
+  marginTop: 14,
+  backgroundColor: "#EF4444",
+  paddingVertical: 14,
+  borderRadius: 999,
+  alignItems: "center",
+},
+
+logoutButtonText: {
+  color: "#FFFFFF",
+  fontWeight: "700",
+  fontSize: 16,
+},
 });

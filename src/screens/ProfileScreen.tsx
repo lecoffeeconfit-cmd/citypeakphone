@@ -10,6 +10,7 @@ type ProfileScreenProps = {
   setBio: (value: string) => void;
   photoUrl: string;
   onSaveProfile: (username: string, bio: string, imageUri?: string) => void;
+  onLogout: () => void;
 };
 
 export function ProfileScreen({
@@ -17,8 +18,9 @@ export function ProfileScreen({
   setUsername,
   bio,
   setBio,
-  photoUrl,
+    photoUrl,
   onSaveProfile,
+  onLogout,
 }: ProfileScreenProps) {
   const [localImageUri, setLocalImageUri] = useState<string | undefined>();
 
@@ -111,6 +113,10 @@ export function ProfileScreen({
       >
         <Text style={styles.primaryButtonText}>Save Profile</Text>
       </Pressable>
+            <Pressable style={styles.logoutButton} onPress={onLogout}>
+        <Text style={styles.logoutButtonText}>Log Out</Text>
+      </Pressable>
+      
     </ScrollView>
   );
 }
