@@ -13,6 +13,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  limit,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -87,7 +88,11 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
 
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    const q = query(
+  collection(db, "posts"),
+  orderBy("createdAt", "desc"),
+  limit(50)
+);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const firebasePosts: Post[] = snapshot.docs.map((snapDoc) => ({
