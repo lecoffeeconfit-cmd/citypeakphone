@@ -1,6 +1,6 @@
 import "./global.css";
 import React, { useEffect, useState } from "react";
-import { Pressable, SafeAreaView, Text, View } from "react-native";
+import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
 import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import {
   addDoc,
@@ -52,6 +52,8 @@ export default function App() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+ const [isAdmin, setIsAdmin] = useState(false);
+  const [reports, setReports] = useState<any[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [startingMessageUserId, setStartingMessageUserId] = useState<string | null>(null);
@@ -62,15 +64,19 @@ export default function App() {
       setFirebaseReady(true);
 
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
+  const userDoc = await getDoc(doc(db, "users", user.uid));
 
-        if (userDoc.exists()) {
-          const data = userDoc.data();
+  if (userDoc.exists()) {
+    const data = userDoc.data();
 
-          setUsername(data.username || user.email?.split("@")[0] || "user");
-          setBio(data.bio || "");
-          setPhotoUrl(data.photoUrl || "");
-        } else {
+    setUsername(data.username || user.email?.split("@")[0] || "user");
+    setBio(data.bio || "");
+    setPhotoUrl(data.photoUrl || "");
+
+    setIsAdmin(data.isAdmin === true);
+    
+
+  } else {
           setUsername(user.email?.split("@")[0] || "user");
           setBio("");
           setPhotoUrl("");
@@ -139,6 +145,40 @@ export default function App() {
 
     return unsubscribe;
   }, [currentUser]);
+
+  useEffect(() => {
+  if (!currentUser) return;
+  if (!isAdmin) return;
+
+  console.log("Starting reports listener for admin:", currentUser.uid);
+
+  const q = query(
+    collection(db, "reports"),
+    limit(50)
+  );
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      console.log("========== REPORT SNAPSHOT ==========");
+      console.log("Snapshot size:", snapshot.size);
+
+      const loadedReports = snapshot.docs.map((reportDoc) => ({
+        id: reportDoc.id,
+        ...reportDoc.data(),
+      }));
+
+
+      setReports(loadedReports);
+    },
+    (error) => {
+      console.error("REPORT LISTENER ERROR:", error);
+      alert("Reports listener error: " + error.message);
+    }
+  );
+
+  return unsubscribe;
+}, [currentUser, isAdmin]);
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
     const response = await fetch(uri);
@@ -592,9 +632,17 @@ export default function App() {
           </Text>
         </View>
 
-        <Pressable style={styles.headerPill} onPress={() => setTab("search")}>
-          <Text style={styles.headerPillText}>{selectedArea}</Text>
-        </Pressable>
+       <View style={{ flexDirection: "row", gap: 8 }}>
+  {isAdmin && (
+    <Pressable style={styles.headerPill} onPress={() => setTab("admin" as Tab)}>
+      <Text style={styles.headerPillText}>Admin</Text>
+    </Pressable>
+  )}
+
+  <Pressable style={styles.headerPill} onPress={() => setTab("search")}>
+    <Text style={styles.headerPillText}>{selectedArea}</Text>
+  </Pressable>
+</View>
       </View>
 
       {postingStatus !== "" && (
@@ -668,6 +716,59 @@ export default function App() {
         />
       )}
 
+{tab === ("admin" as Tab) && (
+  <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 130 }}>
+    <Text style={styles.screenTitle}>Admin Dashboard</Text>
+    <Text style={styles.muted}>Review reports and remove unsafe content.</Text>
+<Text
+  style={{
+    color: "yellow",
+    fontWeight: "900",
+    marginTop: 10,
+    fontSize: 16,
+  }}
+>
+  Reports loaded: {reports.length}
+</Text>
+    {reports.length === 0 && (
+      <Text style={styles.muted}>No reports yet.</Text>
+    )}
+
+    {reports.map((report) => (
+      <View key={report.id} style={styles.postCard}>
+        <Text style={styles.smallTitle}>
+          {report.type === "comment" ? "Reported Comment" : "Reported Post"}
+        </Text>
+
+        <Text style={styles.muted}>Reason: {report.reason}</Text>
+        <Text style={styles.muted}>Status: {report.status || "open"}</Text>
+
+        <Text style={{ color: "white", marginTop: 10, fontWeight: "800" }}>
+          {report.postText || report.commentText || "No text available"}
+        </Text>
+
+        <Pressable
+          style={[styles.logoutButton, { marginTop: 12 }]}
+          onPress={() => deleteDoc(doc(db, "posts", report.postId))}
+        >
+          <Text style={styles.logoutButtonText}>Delete Post</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.primaryButton, { marginTop: 10 }]}
+          onPress={() =>
+            updateDoc(doc(db, "reports", report.id), {
+              status: "reviewed",
+              reviewedAt: serverTimestamp(),
+            })
+          }
+        >
+          <Text style={styles.primaryButtonText}>Mark Reviewed</Text>
+        </Pressable>
+      </View>
+    ))}
+  </ScrollView>
+)}
 
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
@@ -681,12 +782,7 @@ export default function App() {
   onLogout={() => signOut(auth)}
 />
 
-          <Pressable
-            style={[styles.secondaryButton, { marginHorizontal: 20 }]}
-            onPress={handleLogout}
-          >
-            <Text style={styles.secondaryButtonText}>Log Out</Text>
-          </Pressable>
+          
         </View>
       )}
 
