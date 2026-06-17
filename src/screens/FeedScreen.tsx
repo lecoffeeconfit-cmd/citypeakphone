@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, Pressable, ScrollView, Text, View } from "react-native";
-import { PostCard } from "../components/PostCard";
+import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
 import { postCategories } from "../types";
 import type { Post, PostCategory, ReactionKey, Tab } from "../types";
@@ -75,6 +74,7 @@ export function FeedScreen({
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
+  const [postSearch, setPostSearch] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
 
   const filteredPosts = useMemo(() => {
@@ -84,12 +84,28 @@ export function FeedScreen({
       areaPosts = areaPosts.filter((post) => post.category === categoryFilter);
     }
 
+    const cleanedSearch = postSearch.trim().toLowerCase();
+
+    if (cleanedSearch) {
+      areaPosts = areaPosts.filter((post) => {
+        const text = post.text?.toLowerCase() || "";
+        const author = post.author?.toLowerCase() || "";
+        const category = post.category?.toLowerCase() || "";
+
+        return (
+          text.includes(cleanedSearch) ||
+          author.includes(cleanedSearch) ||
+          category.includes(cleanedSearch)
+        );
+      });
+    }
+
     if (feedMode === "trending") {
       return [...areaPosts].sort((a, b) => getTrendingScore(b) - getTrendingScore(a));
     }
 
     return areaPosts;
-  }, [posts, selectedArea, feedMode, categoryFilter]);
+  }, [posts, selectedArea, feedMode, categoryFilter, postSearch]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -104,6 +120,23 @@ export function FeedScreen({
                 🔍 Search or change city · {selectedArea}
               </Text>
             </Pressable>
+
+            <TextInput
+              value={postSearch}
+              onChangeText={setPostSearch}
+              placeholder="Search posts in this city..."
+              placeholderTextColor="#64748B"
+              style={{
+                backgroundColor: "#0F172A",
+                color: "white",
+                borderWidth: 1,
+                borderColor: "#334155",
+                borderRadius: 16,
+                padding: 12,
+                marginBottom: 16,
+                fontWeight: "700",
+              }}
+            />
 
             <View style={{ marginBottom: 16 }}>
               <View style={styles.sectionHeaderRow}>
