@@ -18,11 +18,12 @@ export function ProfileScreen({
   setUsername,
   bio,
   setBio,
-    photoUrl,
+  photoUrl,
   onSaveProfile,
   onLogout,
 }: ProfileScreenProps) {
   const [localImageUri, setLocalImageUri] = useState<string | undefined>();
+  const [isEditing, setIsEditing] = useState(false);
 
   async function pickProfilePhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -41,7 +42,13 @@ export function ProfileScreen({
 
     if (!result.canceled) {
       setLocalImageUri(result.assets[0].uri);
+      setIsEditing(true);
     }
+  }
+
+  function handleSave() {
+    onSaveProfile(username, bio, localImageUri);
+    setIsEditing(false);
   }
 
   const displayPhoto = localImageUri || photoUrl;
@@ -65,7 +72,21 @@ export function ProfileScreen({
 
         <Text style={styles.profileName}>@{username || "username"}</Text>
 
-        <Text style={styles.muted}>Tap your photo to change it.</Text>
+        <Text style={styles.muted}>
+          {isEditing ? "Tap your photo to change it." : "Your CityPeak profile"}
+        </Text>
+
+        {!!bio && !isEditing && (
+          <Text style={{ color: "white", marginTop: 14, textAlign: "center", fontWeight: "700" }}>
+            {bio}
+          </Text>
+        )}
+
+        {!bio && !isEditing && (
+          <Text style={{ color: "#94A3B8", marginTop: 14, textAlign: "center" }}>
+            No bio added yet.
+          </Text>
+        )}
 
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
@@ -85,38 +106,47 @@ export function ProfileScreen({
         </View>
       </View>
 
-      <Text style={styles.smallTitle}>Username</Text>
+      {isEditing ? (
+        <>
+          <Text style={styles.smallTitle}>Username</Text>
 
-      <TextInput
-        style={styles.input}
-        value={username}
-        onChangeText={setUsername}
-        placeholder="Username"
-        placeholderTextColor="#94A3B8"
-        autoCapitalize="none"
-      />
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Username"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+          />
 
-      <Text style={styles.smallTitle}>Bio</Text>
+          <Text style={styles.smallTitle}>Bio</Text>
 
-      <TextInput
-        style={styles.profileBioInput}
-        value={bio}
-        onChangeText={setBio}
-        placeholder="Tell people about yourself..."
-        placeholderTextColor="#94A3B8"
-        multiline
-      />
+          <TextInput
+            style={styles.profileBioInput}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell people about yourself..."
+            placeholderTextColor="#94A3B8"
+            multiline
+          />
 
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() => onSaveProfile(username, bio, localImageUri)}
-      >
-        <Text style={styles.primaryButtonText}>Save Profile</Text>
-      </Pressable>
-            <Pressable style={styles.logoutButton} onPress={onLogout}>
+          <Pressable style={styles.primaryButton} onPress={handleSave}>
+            <Text style={styles.primaryButtonText}>Save Profile</Text>
+          </Pressable>
+
+          <Pressable style={styles.secondaryButton} onPress={() => setIsEditing(false)}>
+            <Text style={styles.secondaryButtonText}>Cancel</Text>
+          </Pressable>
+        </>
+      ) : (
+        <Pressable style={styles.primaryButton} onPress={() => setIsEditing(true)}>
+          <Text style={styles.primaryButtonText}>Edit Profile</Text>
+        </Pressable>
+      )}
+
+      <Pressable style={styles.logoutButton} onPress={onLogout}>
         <Text style={styles.logoutButtonText}>Log Out</Text>
       </Pressable>
-      
     </ScrollView>
   );
 }
