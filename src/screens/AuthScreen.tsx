@@ -30,12 +30,15 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           password
         );
 
-        await setDoc(doc(db, "users", userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          email: email.trim(),
-          username: username.trim() || email.split("@")[0],
-          createdAt: serverTimestamp(),
-        });
+        const cleanedUsername = username.trim() || email.trim().split("@")[0];
+
+await setDoc(doc(db, "users", userCredential.user.uid), {
+  uid: userCredential.user.uid,
+  email: email.trim().toLowerCase(),
+  username: cleanedUsername,
+  usernameLower: cleanedUsername.toLowerCase(),
+  createdAt: serverTimestamp(),
+});
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
       }

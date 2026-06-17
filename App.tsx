@@ -1,7 +1,14 @@
 import "./global.css";
+import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, Text, View } from "react-native";
-import { User, onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";import { User, onAuthStateChanged, signOut } from "firebase/auth";
 import {
   addDoc,
   arrayUnion,
@@ -41,6 +48,27 @@ import type {
   ReactionKey,
   Tab,
 } from "./src/types";
+
+function AdminVideoPreview({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      nativeControls
+      allowsFullscreen
+      style={{
+        width: "100%",
+        height: 220,
+        borderRadius: 16,
+        marginTop: 12,
+        backgroundColor: "#0F172A",
+      }}
+    />
+  );
+}
 export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
@@ -153,9 +181,10 @@ export default function App() {
     console.log("Starting reports listener for admin:", currentUser.uid);
 
     const q = query(
-      collection(db, "reports"),
-      limit(50)
-    );
+  collection(db, "reports"),
+  orderBy("createdAt", "desc"),
+  limit(50)
+);
 
     const unsubscribe = onSnapshot(
       q,
@@ -341,6 +370,8 @@ export default function App() {
       type: "post",
       postId,
       postText: targetPost.text || "",
+      imageUri: targetPost.imageUri || "",
+      mediaType: targetPost.mediaType || "",
       postOwnerUid: targetPost.uid || "",
       postAuthor: targetPost.author || "",
       reportedByUid: currentUser.uid,
@@ -746,6 +777,24 @@ export default function App() {
               <Text style={{ color: "white", marginTop: 10, fontWeight: "800" }}>
                 {report.postText || report.commentText || "No text available"}
               </Text>
+              {report.imageUri && report.mediaType === "video" && (
+  <AdminVideoPreview uri={report.imageUri} />
+)}
+
+{report.imageUri && report.mediaType !== "video" && (
+  <Image
+    source={{ uri: report.imageUri }}
+    style={{
+      width: "100%",
+      height: 220,
+      borderRadius: 16,
+      marginTop: 12,
+      backgroundColor: "#0F172A",
+    }}
+  />
+)}
+              
+              
 
               <Pressable
                 style={[styles.logoutButton, { marginTop: 12 }]}
