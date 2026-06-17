@@ -1,10 +1,17 @@
-export type Tab = "feed" | "search" | "post" | "messages" | "profile";
-
+export type Tab =
+  | "feed"
+  | "search"
+  | "post"
+  | "messages"
+  | "profile"
+  | "admin";
 export type ReactionKey = "fire" | "heart" | "laugh" | "wow";
 
 export type PostCategory =
   | "Educational"
   | "Entertainment"
+  | "Technology"
+  | "News"
   | "Social"
   | "Sales & Marketing"
   | "Random Thoughts"
@@ -13,6 +20,8 @@ export type PostCategory =
 export const postCategories: PostCategory[] = [
   "Educational",
   "Entertainment",
+  "Technology",
+  "News",
   "Social",
   "Sales & Marketing",
   "Random Thoughts",
@@ -45,6 +54,7 @@ export type Post = {
   id: string;
   uid?: string;
 username?: string;
+photoUrl?: string;
   author: string;
   anonymous: boolean;
   text: string;

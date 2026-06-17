@@ -26,10 +26,12 @@ const categoryColors: Record<string, string> = {
   All: "#86B5CF",
   Educational: "#329BB8",
   Entertainment: "#003B57",
-  Social: "#F8B400",
-  "Sales & Marketing": "#F58A00",
-  "Random Thoughts": "#86B5CF",
-  Places: "#329BB8",
+  Technology: "#F8B400",
+  News: "#F58A00",
+  Social: "#86B5CF",
+  "Sales & Marketing": "#329BB8",
+  "Random Thoughts": "#003B57",
+  Places: "#F8B400",
 };
 
 function getTrendingScore(post: Post) {
@@ -52,6 +54,8 @@ function getCategoryEmoji(category: CategoryFilter) {
   if (category === "All") return "🌎";
   if (category === "Educational") return "📘";
   if (category === "Entertainment") return "🎬";
+  if (category === "Technology") return "💻";
+  if (category === "News") return "📰";
   if (category === "Social") return "👥";
   if (category === "Sales & Marketing") return "📣";
   if (category === "Random Thoughts") return "💭";

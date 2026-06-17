@@ -64,12 +64,12 @@ export function PostCard({
   }
 
   function submitReport(reason: string) {
-  const cleanedReason = reason.trim();
+    const cleanedReason = reason.trim();
 
-  if (!cleanedReason) return;
+    if (!cleanedReason) return;
 
-  onReportPost?.(post.id, cleanedReason);
-}
+    onReportPost?.(post.id, cleanedReason);
+  }
 
   function openReportOptions() {
     if (Platform.OS === "web") {
@@ -108,11 +108,23 @@ export function PostCard({
             borderColor: "#334155",
             alignItems: "center",
             justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          <Text style={{ color: "#CBD5E1", fontSize: 24, fontWeight: "900" }}>
-            {post.anonymous ? "👤" : post.author.replace("@", "")[0]?.toUpperCase()}
-          </Text>
+          {!post.anonymous && post.photoUrl ? (
+            <Image
+              source={{ uri: post.photoUrl }}
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 29,
+              }}
+            />
+          ) : (
+            <Text style={{ color: "#CBD5E1", fontSize: 24, fontWeight: "900" }}>
+              {post.anonymous ? "👤" : post.author.replace("@", "")[0]?.toUpperCase()}
+            </Text>
+          )}
         </View>
 
         <View style={{ flex: 1, marginLeft: 12 }}>
