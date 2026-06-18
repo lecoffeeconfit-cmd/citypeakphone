@@ -77,10 +77,29 @@ export function ProfileScreen({
         </Text>
 
         {!!bio && !isEditing && (
-          <Text style={{ color: "white", marginTop: 14, textAlign: "center", fontWeight: "700" }}>
-            {bio}
-          </Text>
-        )}
+  <View
+    style={{
+      marginTop: 16,
+      backgroundColor: "#0F172A",
+      borderWidth: 1,
+      borderColor: "#334155",
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#CBD5E1",
+        textAlign: "center",
+        fontSize: 15,
+        lineHeight: 24,
+      }}
+    >
+      {bio}
+    </Text>
+  </View>
+)}
 
         {!bio && !isEditing && (
           <Text style={{ color: "#94A3B8", marginTop: 14, textAlign: "center" }}>

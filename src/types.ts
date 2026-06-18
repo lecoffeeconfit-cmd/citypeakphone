@@ -5,8 +5,7 @@ export type Tab =
   | "messages"
   | "profile"
   | "admin";
-export type ReactionKey = "fire" | "heart" | "laugh" | "wow";
-
+export type ReactionKey = "fire" | "heart" | "laugh" | "wow" | "dislike";
 export type PostCategory =
   | "Educational"
   | "Entertainment"
@@ -15,7 +14,8 @@ export type PostCategory =
   | "Social"
   | "Sales & Marketing"
   | "Random Thoughts"
-  | "Places";
+  | "Places"
+  | "Food";
 
 export const postCategories: PostCategory[] = [
   "Educational",
@@ -26,6 +26,7 @@ export const postCategories: PostCategory[] = [
   "Sales & Marketing",
   "Random Thoughts",
   "Places",
+  "Food",
 ];
 
 export type MediaType = "image" | "video";
@@ -72,4 +73,5 @@ export const reactionButtons: { key: ReactionKey; emoji: string }[] = [
   { key: "heart", emoji: "❤️" },
   { key: "laugh", emoji: "😂" },
   { key: "wow", emoji: "😮" },
+  { key: "dislike", emoji: "👎" },
 ];

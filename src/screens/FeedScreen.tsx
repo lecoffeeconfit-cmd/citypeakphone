@@ -31,6 +31,7 @@ const categoryColors: Record<string, string> = {
   "Sales & Marketing": "#329BB8",
   "Random Thoughts": "#003B57",
   Places: "#F8B400",
+  Food: "#F58A00",
 };
 
 function getTrendingScore(post: Post) {
