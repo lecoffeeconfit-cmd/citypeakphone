@@ -248,12 +248,12 @@ export const styles = StyleSheet.create({
   },
 
   postImage: {
-    width: "100%",
-    height: 250,
-    borderRadius: 24,
-    marginBottom: 15,
-    backgroundColor: "#E5E7EB",
-  },
+  width: "100%",
+  height: 320,
+  borderRadius: 24,
+  marginBottom: 15,
+  backgroundColor: "#0F172A",
+},
 
   reactionRow: {
     flexDirection: "row",

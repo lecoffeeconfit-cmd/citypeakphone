@@ -59,6 +59,7 @@ function getCategoryEmoji(category: CategoryFilter) {
   if (category === "Social") return "👥";
   if (category === "Sales & Marketing") return "📣";
   if (category === "Random Thoughts") return "💭";
+  if (category === "Food") return "🍔";
   return "📍";
 }
 

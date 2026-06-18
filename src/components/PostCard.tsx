@@ -1,5 +1,5 @@
-import React from "react";
-import { Alert, Image, Platform, Pressable, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Image, Modal, Platform, Pressable, Text, View } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
@@ -40,8 +40,9 @@ export function PostCard({
   onReportPost,
   onMessagePost,
 }: PostCardProps) {
-  const previewComments = post.comments.slice(0, 2);
-  const isOwner = !!currentUserId && post.uid === currentUserId;
+const previewComments = post.comments.slice(0, 2);
+const isOwner = !!currentUserId && post.uid === currentUserId;
+const [mediaOpen, setMediaOpen] = useState(false);
 
   function confirmDelete() {
     if (Platform.OS === "web") {
@@ -172,22 +173,30 @@ export function PostCard({
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
 
       {post.imageUri && post.mediaType === "video" && (
-        <View
-          style={{
-            borderRadius: 24,
-            overflow: "hidden",
-            borderWidth: 1,
-            borderColor: "#334155",
-            marginBottom: 15,
-          }}
-        >
-          <PostVideo uri={post.imageUri} />
-        </View>
-      )}
+  <Pressable onPress={() => setMediaOpen(true)}>
+    <View
+      style={{
+        borderRadius: 24,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "#334155",
+        marginBottom: 15,
+      }}
+    >
+      <PostVideo uri={post.imageUri} />
+    </View>
+  </Pressable>
+)}
 
-      {post.imageUri && post.mediaType !== "video" && (
-        <Image source={{ uri: post.imageUri }} style={styles.postImage} />
-      )}
+     {post.imageUri && post.mediaType !== "video" && (
+  <Pressable onPress={() => setMediaOpen(true)}>
+    <Image
+      source={{ uri: post.imageUri }}
+      style={styles.postImage}
+      resizeMode="contain"
+    />
+  </Pressable>
+)}
 
       <View
         style={{
@@ -261,7 +270,7 @@ export function PostCard({
         )}
       </View>
 
-      {previewComments.length > 0 && (
+            {previewComments.length > 0 && (
         <View style={{ marginTop: 14 }}>
           {previewComments.map((comment) => (
             <View key={comment.id} style={styles.previewCommentCard}>
@@ -284,6 +293,59 @@ export function PostCard({
           )}
         </View>
       )}
+
+      <Modal visible={mediaOpen} animationType="fade" transparent>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.96)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 12,
+          }}
+        >
+          <Pressable
+            onPress={() => setMediaOpen(false)}
+            style={{
+              position: "absolute",
+              top: 50,
+              right: 22,
+              zIndex: 10,
+              backgroundColor: "#1E293B",
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "#334155",
+            }}
+          >
+            <Text style={{ color: "white", fontWeight: "900" }}>Close</Text>
+          </Pressable>
+
+          {post.imageUri && post.mediaType === "video" && (
+            <View
+              style={{
+                width: "100%",
+                height: "80%",
+                justifyContent: "center",
+              }}
+            >
+              <PostVideo uri={post.imageUri} />
+            </View>
+          )}
+
+          {post.imageUri && post.mediaType !== "video" && (
+            <Image
+              source={{ uri: post.imageUri }}
+              style={{
+                width: "100%",
+                height: "85%",
+              }}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
