@@ -235,19 +235,29 @@ export function PostCard({
             <Text style={{ color: "white", fontWeight: "900" }}>Delete</Text>
           </Pressable>
         ) : (
-          <Pressable
-            onPress={openReportOptions}
-            style={{
-              backgroundColor: "#0F172A",
-              paddingVertical: 10,
-              paddingHorizontal: 15,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "#334155",
-            }}
-          >
-            <Text style={{ color: "#CBD5E1", fontWeight: "900" }}>Report</Text>
-          </Pressable>
+         <Pressable
+  onPress={openReportOptions}
+  style={{
+    backgroundColor: "#6B1F1F",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#8B2B2B",
+  }}
+>
+  <Text
+    style={{
+      color: "#FFFFFF",
+      fontWeight: "900",
+      textShadowColor: "rgba(0,0,0,0.25)",
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 1,
+    }}
+  >
+    Report
+  </Text>
+</Pressable>
         )}
       </View>
 

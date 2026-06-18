@@ -275,19 +275,19 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
-  commentButton: {
-    backgroundColor: "#329BB8",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#329BB8",
-  },
+ commentButton: {
+  backgroundColor: "#0F172A",
+  paddingVertical: 10,
+  paddingHorizontal: 15,
+  borderRadius: 999,
+  borderWidth: 1,
+  borderColor: "#334155",
+},
 
   commentButtonText: {
-    color: "#1E293B",
-    fontWeight: "900",
-  },
+  color: "#FFFFFF",
+  fontWeight: "900",
+},
 
   floatingButton: {
     position: "absolute",
