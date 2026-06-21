@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { styles } from "../styles";
 import type { Post, ReactionKey } from "../types";
 import { timeAgo } from "../utils/timeAgo";
@@ -32,6 +32,7 @@ export function PostDetailsModal({
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   const [anonymous, setAnonymous] = useState(true);
   const [localPost, setLocalPost] = useState<Post | null>(post);
+  const [imagePreviewUri, setImagePreviewUri] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalPost(post);
@@ -237,6 +238,27 @@ export function PostDetailsModal({
               </Text>
 
               {!!localPost.text && <Text style={styles.postText}>{localPost.text}</Text>}
+              {!!localPost.imageUri && localPost.mediaType !== "video" && (
+                <Pressable
+                  onPress={() => {
+                    if (localPost.imageUri) {
+                      setImagePreviewUri(localPost.imageUri);
+                    }
+                  }}
+                >
+                  <Image
+                    source={{ uri: localPost.imageUri }}
+                    style={{
+                      width: "100%",
+                      height: 300,
+                      borderRadius: 16,
+                      marginTop: 12,
+                      backgroundColor: "#0F172A",
+                    }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
+              )}
             </View>
 
             <Text style={styles.smallTitle}>Comments</Text>
@@ -278,6 +300,55 @@ export function PostDetailsModal({
           </ScrollView>
         </View>
       </View>
+      <Modal visible={!!imagePreviewUri} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+          }}
+        >
+          <Pressable
+            onPress={() => setImagePreviewUri(null)}
+            style={{
+              position: "absolute",
+              top: 50,
+              right: 24,
+              zIndex: 10,
+              backgroundColor: "#111827",
+              borderRadius: 999,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+            }}
+          >
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
+              ✕
+            </Text>
+          </Pressable>
+
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            centerContent
+          >
+            {imagePreviewUri && (
+              <Image
+                source={{ uri: imagePreviewUri }}
+                style={{
+                  width: "100%",
+                  height: 700,
+                }}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </Modal>
   );
 }

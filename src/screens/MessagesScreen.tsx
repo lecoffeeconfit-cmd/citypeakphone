@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+Platform,
+Keyboard,
   Pressable,
   Text,
   TextInput,
@@ -11,7 +14,7 @@ import type { User } from "firebase/auth";
 import {
   addDoc,
   arrayRemove,
-arrayUnion,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -83,8 +86,23 @@ export function MessagesScreen({
     string | null
   >(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const messagesListRef = useRef<FlatList>(null);
+  useEffect(() => {
+  const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
+    setKeyboardVisible(true);
+  });
+
+  const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+    setKeyboardVisible(false);
+  });
+
+  return () => {
+    showSubscription.remove();
+    hideSubscription.remove();
+  };
+}, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (userDoc) => {
@@ -160,8 +178,6 @@ export function MessagesScreen({
       const otherUid =
         message.fromUid === currentUser.uid ? message.toUid : message.fromUid;
 
-      
-
       const foundUser = users.find((user) => user.uid === otherUid);
 
       if (!foundUser) return;
@@ -203,38 +219,36 @@ export function MessagesScreen({
   const searchedUsers =
     cleanedSearch.length === 0
       ? []
-      : users.filter(
-  (user) =>
-    user.username?.toLowerCase().includes(cleanedSearch)
-);
+      : users.filter((user) =>
+          user.username?.toLowerCase().includes(cleanedSearch)
+        );
 
   async function blockSelectedUser() {
-  if (!selectedUser) return;
+    if (!selectedUser) return;
 
-  const confirmBlock = window.confirm(
-    `Block @${selectedUser.username}? You will no longer see messages from this user.`
-  );
+    const confirmBlock = window.confirm(
+      `Block @${selectedUser.username}? You will no longer see messages from this user.`
+    );
 
-  if (!confirmBlock) return;
+    if (!confirmBlock) return;
 
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    blockedUserIds: arrayUnion(selectedUser.uid),
-  });
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      blockedUserIds: arrayUnion(selectedUser.uid),
+    });
 
-  setSelectedUser(null);
-  alert(`@${selectedUser.username} has been blocked.`);
-}
+    setSelectedUser(null);
+    alert(`@${selectedUser.username} has been blocked.`);
+  }
 
   async function unblockSelectedUser() {
-  if (!selectedUser) return;
+    if (!selectedUser) return;
 
-  await updateDoc(doc(db, "users", currentUser.uid), {
-    blockedUserIds: arrayRemove(selectedUser.uid),
-  });
+    await updateDoc(doc(db, "users", currentUser.uid), {
+      blockedUserIds: arrayRemove(selectedUser.uid),
+    });
 
-  Alert.alert("User unblocked", `@${selectedUser.username} has been unblocked.`);
-}
-
+    Alert.alert("User unblocked", `@${selectedUser.username} has been unblocked.`);
+  }
 
   async function sendMessage() {
     if (!selectedUser) return;
@@ -308,161 +322,184 @@ export function MessagesScreen({
 
   if (selectedUser) {
     return (
-      <View style={styles.screen}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-  <Pressable onPress={() => setSelectedUser(null)}>
-    <Text style={{ color: "#60A5FA", fontWeight: "900" }}>
-      ← Back to messages
-    </Text>
-  </Pressable>
-
-  <Pressable
-  onPress={
-    blockedUserIds.includes(selectedUser.uid)
-      ? unblockSelectedUser
-      : blockSelectedUser
-  }
-  style={{
-    backgroundColor: blockedUserIds.includes(selectedUser.uid)
-      ? "#166534"
-      : "#7F1D1D",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    zIndex: 99999,
-    elevation: 99999,
-    position: "relative",
-  }}
->
-  <Text style={{ color: "white", fontWeight: "900" }}>
-    {blockedUserIds.includes(selectedUser.uid) ? "✅ Unblock" : "🚫 Block User"}
-  </Text>
-</Pressable>
-</View>
-
-       <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
-  Chat with @{selectedUser.username}
-</Text>
-
-
-        <FlatList
-          ref={messagesListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          style={{ flex: 1, marginTop: 16, zIndex: 1 }}
-          onContentSizeChange={() => {
-            setTimeout(() => {
-              messagesListRef.current?.scrollToEnd({
-                animated: true,
-              });
-            }, 10);
-          }}
-          renderItem={({ item }) => {
-            const isMine = item.fromUid === currentUser.uid;
-
-            return (
-              <Pressable
-                onPress={() =>
-                  setActiveReactionMessageId(
-                    activeReactionMessageId === item.id ? null : item.id
-                  )
-                }
-                onLongPress={() => {
-                  if (isMine) deleteMessage(item.id);
-                }}
-                style={{
-                  alignSelf: isMine ? "flex-end" : "flex-start",
-                  backgroundColor: isMine ? "#2563EB" : "#1E293B",
-                  padding: 12,
-                  borderRadius: 16,
-                  marginBottom: 10,
-                  maxWidth: "80%",
-                }}
-              >
-                <Text style={{ color: "white", fontWeight: "800" }}>
-                  {item.text}
-                </Text>
-
-                <Text
-                  style={{
-                    color: isMine ? "#BFDBFE" : "#94A3B8",
-                    fontSize: 11,
-                    marginTop: 5,
-                  }}
-                >
-                  {formatMessageTime(item.createdAt)}
-                  {isMine ? " · Hold to delete" : ""}
-                </Text>
-
-                {item.reactions && Object.values(item.reactions).length > 0 && (
-                  <Text style={{ marginTop: 6, fontSize: 16 }}>
-                    {Object.values(item.reactions).join(" ")}
-                  </Text>
-                )}
-
-                {activeReactionMessageId === item.id && (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: 6,
-                      marginTop: 8,
-                      backgroundColor: "#020617",
-                      padding: 6,
-                      borderRadius: 999,
-                    }}
-                  >
-                    {["❤️", "😂", "🔥", "😮", "👍"].map((emoji) => (
-                      <Pressable
-                        key={emoji}
-                        onPress={() => reactToMessage(item.id, emoji)}
-                      >
-                        <Text style={{ fontSize: 18 }}>{emoji}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-              </Pressable>
-            );
-          }}
-          ListEmptyComponent={
-            <Text style={{ color: "#94A3B8", marginTop: 20 }}>
-              No messages yet. Send the first one.
-            </Text>
-          }
-        />
-
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-          <TextInput
-            value={messageText}
-            onChangeText={setMessageText}
-            onSubmitEditing={sendMessage}
-            returnKeyType="send"
-            placeholder="Type a message..."
-            placeholderTextColor="#64748B"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={20}
+      >
+        <View style={[styles.screen, { flex: 1, paddingBottom: 0 }]}>
+          <View
             style={{
-              flex: 1,
-              backgroundColor: "#0F172A",
-              color: "white",
-              borderWidth: 1,
-              borderColor: "#334155",
-              borderRadius: 14,
-              padding: 12,
-            }}
-          />
-
-          <Pressable
-            onPress={sendMessage}
-            style={{
-              backgroundColor: "#2563EB",
-              paddingHorizontal: 16,
-              justifyContent: "center",
-              borderRadius: 14,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <Text style={{ color: "white", fontWeight: "900" }}>Send</Text>
-          </Pressable>
+            <Pressable onPress={() => setSelectedUser(null)}>
+              <Text style={{ color: "#60A5FA", fontWeight: "900" }}>
+                ← Back to messages
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={
+                blockedUserIds.includes(selectedUser.uid)
+                  ? unblockSelectedUser
+                  : blockSelectedUser
+              }
+              style={{
+                backgroundColor: blockedUserIds.includes(selectedUser.uid)
+                  ? "#166534"
+                  : "#7F1D1D",
+                paddingVertical: 12,
+                paddingHorizontal: 18,
+                borderRadius: 14,
+                zIndex: 99999,
+                elevation: 99999,
+                position: "relative",
+              }}
+            >
+              <Text style={{ color: "white", fontWeight: "900" }}>
+                {blockedUserIds.includes(selectedUser.uid)
+                  ? "✅ Unblock"
+                  : "🚫 Block User"}
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
+            Chat with @{selectedUser.username}
+          </Text>
+
+          <FlatList
+            ref={messagesListRef}
+            data={messages}
+            keyExtractor={(item) => item.id}
+            style={{ flex: 1, marginTop: 16, zIndex: 1 }}
+            contentContainerStyle={{ paddingBottom: 12 }}
+            onContentSizeChange={() => {
+              setTimeout(() => {
+                messagesListRef.current?.scrollToEnd({
+                  animated: true,
+                });
+              }, 10);
+            }}
+            renderItem={({ item }) => {
+              const isMine = item.fromUid === currentUser.uid;
+
+              return (
+                <Pressable
+                  onPress={() =>
+                    setActiveReactionMessageId(
+                      activeReactionMessageId === item.id ? null : item.id
+                    )
+                  }
+                  onLongPress={() => {
+                    if (isMine) deleteMessage(item.id);
+                  }}
+                  style={{
+                    alignSelf: isMine ? "flex-end" : "flex-start",
+                    backgroundColor: isMine ? "#2563EB" : "#1E293B",
+                    padding: 12,
+                    borderRadius: 16,
+                    marginBottom: 10,
+                    maxWidth: "80%",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "800" }}>
+                    {item.text}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: isMine ? "#BFDBFE" : "#94A3B8",
+                      fontSize: 11,
+                      marginTop: 5,
+                    }}
+                  >
+                    {formatMessageTime(item.createdAt)}
+                    {isMine ? " · Hold to delete" : ""}
+                  </Text>
+
+                  {item.reactions &&
+                    Object.values(item.reactions).length > 0 && (
+                      <Text style={{ marginTop: 6, fontSize: 16 }}>
+                        {Object.values(item.reactions).join(" ")}
+                      </Text>
+                    )}
+
+                  {activeReactionMessageId === item.id && (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 6,
+                        marginTop: 8,
+                        backgroundColor: "#020617",
+                        padding: 6,
+                        borderRadius: 999,
+                      }}
+                    >
+                      {["❤️", "😂", "🔥", "😮", "👍"].map((emoji) => (
+                        <Pressable
+                          key={emoji}
+                          onPress={() => reactToMessage(item.id, emoji)}
+                        >
+                          <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={{ color: "#94A3B8", marginTop: 20 }}>
+                No messages yet. Send the first one.
+              </Text>
+            }
+          />
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 8,
+              marginTop: 12,
+              marginBottom: keyboardVisible ? 2 : 95,
+            }}
+          >
+            <TextInput
+              value={messageText}
+              onChangeText={setMessageText}
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
+              blurOnSubmit={false}
+              placeholder="Type a message..."
+              placeholderTextColor="#64748B"
+              style={{
+                flex: 1,
+                backgroundColor: "#0F172A",
+                color: "white",
+                borderWidth: 1,
+                borderColor: "#334155",
+                borderRadius: 14,
+                padding: 12,
+              }}
+            />
+
+            <Pressable
+              onPress={sendMessage}
+              style={{
+                backgroundColor: "#2563EB",
+                paddingHorizontal: 16,
+                justifyContent: "center",
+                borderRadius: 14,
+              }}
+            >
+              <Text style={{ color: "white", fontWeight: "900" }}>Send</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 

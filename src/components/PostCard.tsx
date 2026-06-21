@@ -181,9 +181,37 @@ const [mediaOpen, setMediaOpen] = useState(false);
         borderWidth: 1,
         borderColor: "#334155",
         marginBottom: 15,
+        position: "relative",
       }}
     >
       <PostVideo uri={post.imageUri} />
+
+      <View
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          marginLeft: -30,
+          marginTop: -30,
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          backgroundColor: "rgba(0,0,0,0.65)",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            color: "white",
+            fontSize: 28,
+            fontWeight: "900",
+            marginLeft: 4,
+          }}
+        >
+          ▶
+        </Text>
+      </View>
     </View>
   </Pressable>
 )}
