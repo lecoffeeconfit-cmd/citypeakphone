@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";import { useVideoPlayer, VideoView } from "expo-video";
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native"; import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
 import { timeAgo } from "../utils/timeAgo";
@@ -189,23 +189,7 @@ export function PostCard({
               position: "relative",
             }}
           >
-            <View
-  style={[
-    styles.postImage,
-    {
-      backgroundColor: "#020617",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-  ]}
->
-  <Text style={{ color: "white", fontSize: 42, fontWeight: "900" }}>
-    ▶
-  </Text>
-  <Text style={{ color: "#94A3B8", marginTop: 8, fontWeight: "800" }}>
-    Tap to play video
-  </Text>
-</View>
+            <PostVideo uri={post.imageUri} controls={false} />
 
             <View
               style={{
@@ -381,29 +365,29 @@ export function PostCard({
           )}
 
           {post.imageUri &&
-  post.mediaType !== "video" &&
-  !post.imageUri.startsWith("blob:") && (
-    <ScrollView
-      style={{ width: "100%", height: "85%" }}
-      contentContainerStyle={{
-        flexGrow: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-      maximumZoomScale={4}
-      minimumZoomScale={1}
-      centerContent
-    >
-      <Image
-        source={{ uri: post.imageUri }}
-        style={{
-          width: 360,
-          height: 650,
-        }}
-        resizeMode="contain"
-      />
-    </ScrollView>
-)}
+            post.mediaType !== "video" &&
+            !post.imageUri.startsWith("blob:") && (
+              <ScrollView
+                style={{ width: "100%", height: "85%" }}
+                contentContainerStyle={{
+                  flexGrow: 1,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                maximumZoomScale={4}
+                minimumZoomScale={1}
+                centerContent
+              >
+                <Image
+                  source={{ uri: post.imageUri }}
+                  style={{
+                    width: 360,
+                    height: 650,
+                  }}
+                  resizeMode="contain"
+                />
+              </ScrollView>
+            )}
         </View>
       </Modal>
     </View>
