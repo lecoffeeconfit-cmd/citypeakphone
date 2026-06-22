@@ -8,7 +8,7 @@ import {
   ScrollView,
   Text,
   View,
-} from "react-native";import { User, onAuthStateChanged, signOut } from "firebase/auth";
+} from "react-native";import { User, onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
 import {
   addDoc,
   arrayUnion,
@@ -635,6 +635,27 @@ export default function App() {
   async function handleLogout() {
     await signOut(auth);
   }
+  async function deleteAccount() {
+  if (!currentUser) return;
+
+  const confirmed = confirm(
+    "Are you sure you want to permanently delete your CityPeak account?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "users", currentUser.uid));
+    await deleteUser(currentUser);
+
+    alert("Account deleted.");
+  } catch (error: any) {
+    alert(
+      error.message ||
+        "Please log out and back in before deleting your account."
+    );
+  }
+}
 
   if (!firebaseReady) {
     return (
@@ -822,14 +843,15 @@ export default function App() {
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
           <ProfileScreen
-            username={username}
-            setUsername={setUsername}
-            bio={bio}
-            setBio={setBio}
-            photoUrl={photoUrl}
-            onSaveProfile={saveProfile}
-            onLogout={() => signOut(auth)}
-          />
+  username={username}
+  setUsername={setUsername}
+  bio={bio}
+  setBio={setBio}
+  photoUrl={photoUrl}
+  onSaveProfile={saveProfile}
+  onLogout={() => signOut(auth)}
+  onDeleteAccount={deleteAccount}
+/>
 
 
         </View>

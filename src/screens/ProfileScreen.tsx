@@ -11,6 +11,7 @@ type ProfileScreenProps = {
   photoUrl: string;
   onSaveProfile: (username: string, bio: string, imageUri?: string) => void;
   onLogout: () => void;
+onDeleteAccount: () => void;
 };
 
 export function ProfileScreen({
@@ -19,8 +20,9 @@ export function ProfileScreen({
   bio,
   setBio,
   photoUrl,
-  onSaveProfile,
-  onLogout,
+ onSaveProfile,
+onLogout,
+onDeleteAccount,
 }: ProfileScreenProps) {
   const [localImageUri, setLocalImageUri] = useState<string | undefined>();
   const [isEditing, setIsEditing] = useState(false);
@@ -166,6 +168,28 @@ export function ProfileScreen({
       <Pressable style={styles.logoutButton} onPress={onLogout}>
         <Text style={styles.logoutButtonText}>Log Out</Text>
       </Pressable>
+      <Pressable
+  onPress={onDeleteAccount}
+  style={{
+    backgroundColor: "#450A0A",
+    borderWidth: 1,
+    borderColor: "#991B1B",
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 14,
+    marginBottom: 30,
+  }}
+>
+  <Text
+    style={{
+      color: "white",
+      fontWeight: "900",
+      textAlign: "center",
+    }}
+  >
+    Delete Account
+  </Text>
+</Pressable>
     </ScrollView>
   );
 }

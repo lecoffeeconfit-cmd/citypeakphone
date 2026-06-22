@@ -17,7 +17,7 @@ export function BottomNav({
     { key: "feed", label: "Feed", icon: "🏠" },
     { key: "search", label: "Search", icon: "🔍" },
     { key: "post", label: "Post", icon: "➕" },
-    { key: "messages", label: "DMs", icon: "💬" },
+    { key: "messages", label: "Messages", icon: "💬" },
     { key: "profile", label: "Me", icon: "👤" },
   ];
 
