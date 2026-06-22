@@ -238,7 +238,7 @@ export function PostDetailsModal({
               </Text>
 
               {!!localPost.text && <Text style={styles.postText}>{localPost.text}</Text>}
-              {!!localPost.imageUri && localPost.mediaType !== "video" && (
+              {!!localPost.imageUri && localPost.mediaType !== "video" && !localPost.imageUri.startsWith("blob:") && (
                 <Pressable
                   onPress={() => {
                     if (localPost.imageUri) {
@@ -336,7 +336,7 @@ export function PostDetailsModal({
             minimumZoomScale={1}
             centerContent
           >
-            {imagePreviewUri && (
+            {imagePreviewUri && !imagePreviewUri.startsWith("blob:") && (
               <Image
                 source={{ uri: imagePreviewUri }}
                 style={{

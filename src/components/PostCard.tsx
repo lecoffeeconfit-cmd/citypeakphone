@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Image, Modal, Platform, Pressable, Text, View } from "react-native";
-import { useVideoPlayer, VideoView } from "expo-video";
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
 import { timeAgo } from "../utils/timeAgo";
@@ -15,7 +14,13 @@ type PostCardProps = {
   onMessagePost?: () => void;
 };
 
-function PostVideo({ uri }: { uri: string }) {
+function PostVideo({
+  uri,
+  controls = true,
+}: {
+  uri: string;
+  controls?: boolean;
+}) {
   const player = useVideoPlayer(uri, (player) => {
     player.loop = false;
   });
@@ -26,7 +31,7 @@ function PostVideo({ uri }: { uri: string }) {
       style={styles.postImage}
       allowsFullscreen
       allowsPictureInPicture
-      nativeControls
+      nativeControls={controls}
     />
   );
 }
@@ -40,9 +45,9 @@ export function PostCard({
   onReportPost,
   onMessagePost,
 }: PostCardProps) {
-const previewComments = post.comments.slice(0, 2);
-const isOwner = !!currentUserId && post.uid === currentUserId;
-const [mediaOpen, setMediaOpen] = useState(false);
+  const previewComments = post.comments.slice(0, 2);
+  const isOwner = !!currentUserId && post.uid === currentUserId;
+  const [mediaOpen, setMediaOpen] = useState(false);
 
   function confirmDelete() {
     if (Platform.OS === "web") {
@@ -173,58 +178,71 @@ const [mediaOpen, setMediaOpen] = useState(false);
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
 
       {post.imageUri && post.mediaType === "video" && (
-  <Pressable onPress={() => setMediaOpen(true)}>
-    <View
-      style={{
-        borderRadius: 24,
-        overflow: "hidden",
-        borderWidth: 1,
-        borderColor: "#334155",
-        marginBottom: 15,
-        position: "relative",
-      }}
-    >
-      <PostVideo uri={post.imageUri} />
+        <Pressable onPress={() => setMediaOpen(true)}>
+          <View
+            style={{
+              borderRadius: 24,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#334155",
+              marginBottom: 15,
+              position: "relative",
+            }}
+          >
+            <View
+  style={[
+    styles.postImage,
+    {
+      backgroundColor: "#020617",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+  ]}
+>
+  <Text style={{ color: "white", fontSize: 42, fontWeight: "900" }}>
+    ▶
+  </Text>
+  <Text style={{ color: "#94A3B8", marginTop: 8, fontWeight: "800" }}>
+    Tap to play video
+  </Text>
+</View>
 
-      <View
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          marginLeft: -30,
-          marginTop: -30,
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          backgroundColor: "rgba(0,0,0,0.65)",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Text
-          style={{
-            color: "white",
-            fontSize: 28,
-            fontWeight: "900",
-            marginLeft: 4,
-          }}
-        >
-          ▶
-        </Text>
-      </View>
-    </View>
-  </Pressable>
-)}
+            <View
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                backgroundColor: "rgba(0,0,0,0.75)",
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+              }}
+            >
+              <Text
+                style={{
+                  color: "white",
+                  fontWeight: "900",
+                  fontSize: 12,
+                }}
+              >
+                ▶ VIDEO
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      )}
 
-     {post.imageUri && post.mediaType !== "video" && (
-  <Pressable onPress={() => setMediaOpen(true)}>
-    <Image
-      source={{ uri: post.imageUri }}
-      style={styles.postImage}
-      resizeMode="contain"
-    />
-  </Pressable>
-)}
+      {post.imageUri &&
+        post.mediaType !== "video" &&
+        !post.imageUri.startsWith("blob:") && (
+          <Pressable onPress={() => setMediaOpen(true)}>
+            <Image
+              source={{ uri: post.imageUri }}
+              style={styles.postImage}
+              resizeMode="contain"
+            />
+          </Pressable>
+        )}
 
       <View
         style={{
@@ -272,33 +290,33 @@ const [mediaOpen, setMediaOpen] = useState(false);
             <Text style={{ color: "white", fontWeight: "900" }}>Delete</Text>
           </Pressable>
         ) : (
-         <Pressable
-  onPress={openReportOptions}
-  style={{
-    backgroundColor: "#6B1F1F",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#8B2B2B",
-  }}
->
-  <Text
-    style={{
-      color: "#FFFFFF",
-      fontWeight: "900",
-      textShadowColor: "rgba(0,0,0,0.25)",
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 1,
-    }}
-  >
-    Report
-  </Text>
-</Pressable>
+          <Pressable
+            onPress={openReportOptions}
+            style={{
+              backgroundColor: "#6B1F1F",
+              paddingVertical: 10,
+              paddingHorizontal: 15,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "#8B2B2B",
+            }}
+          >
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontWeight: "900",
+                textShadowColor: "rgba(0,0,0,0.25)",
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 1,
+              }}
+            >
+              Report
+            </Text>
+          </Pressable>
         )}
       </View>
 
-            {previewComments.length > 0 && (
+      {previewComments.length > 0 && (
         <View style={{ marginTop: 14 }}>
           {previewComments.map((comment) => (
             <View key={comment.id} style={styles.previewCommentCard}>
@@ -362,16 +380,30 @@ const [mediaOpen, setMediaOpen] = useState(false);
             </View>
           )}
 
-          {post.imageUri && post.mediaType !== "video" && (
-            <Image
-              source={{ uri: post.imageUri }}
-              style={{
-                width: "100%",
-                height: "85%",
-              }}
-              resizeMode="contain"
-            />
-          )}
+          {post.imageUri &&
+  post.mediaType !== "video" &&
+  !post.imageUri.startsWith("blob:") && (
+    <ScrollView
+      style={{ width: "100%", height: "85%" }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+      maximumZoomScale={4}
+      minimumZoomScale={1}
+      centerContent
+    >
+      <Image
+        source={{ uri: post.imageUri }}
+        style={{
+          width: 360,
+          height: 650,
+        }}
+        resizeMode="contain"
+      />
+    </ScrollView>
+)}
         </View>
       </Modal>
     </View>
