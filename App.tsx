@@ -1,4 +1,7 @@
 import "./global.css";
+import { Platform } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useState } from "react";
 import {
@@ -8,7 +11,7 @@ import {
   ScrollView,
   Text,
   View,
-} from "react-native";import { User, onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
+} from "react-native"; import { User, onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
 import {
   addDoc,
   arrayUnion,
@@ -181,10 +184,10 @@ export default function App() {
     console.log("Starting reports listener for admin:", currentUser.uid);
 
     const q = query(
-  collection(db, "reports"),
-  orderBy("createdAt", "desc"),
-  limit(50)
-);
+      collection(db, "reports"),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
 
     const unsubscribe = onSnapshot(
       q,
@@ -210,15 +213,30 @@ export default function App() {
   }, [currentUser, isAdmin]);
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
+  try {
     const extension = mediaType === "video" ? "mp4" : "jpg";
     const fileName = `${Date.now()}.${extension}`;
+    const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
 
-    const { error } = await supabase.storage.from("images").upload(fileName, blob, {
-      contentType: mediaType === "video" ? "video/mp4" : "image/jpeg",
-    });
+    let fileBody: Blob | ArrayBuffer;
+
+    if (Platform.OS === "web") {
+      const response = await fetch(uri);
+      fileBody = await response.blob();
+    } else {
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: "base64",
+      });
+
+      fileBody = decode(base64);
+    }
+
+    const { error } = await supabase.storage
+      .from("images")
+      .upload(fileName, fileBody, {
+        contentType,
+        upsert: false,
+      });
 
     if (error) {
       console.log("SUPABASE ERROR:", error);
@@ -231,7 +249,12 @@ export default function App() {
       .getPublicUrl(fileName);
 
     return publicUrlData.publicUrl;
+  } catch (error: any) {
+    console.log("UPLOAD MEDIA ERROR:", error);
+    alert(error.message || "Media upload failed.");
+    return null;
   }
+}
 
   async function saveProfile(
     newUsername: string,
@@ -299,12 +322,16 @@ export default function App() {
 
     try {
       if (mediaUri) {
-        const result = await uploadMediaToSupabase(mediaUri, mediaType);
+  const result = await uploadMediaToSupabase(mediaUri, mediaType);
 
-        if (result) {
-          uploadedMediaUrl = result;
-        }
-      }
+  if (!result) {
+    setPostingStatus("");
+    alert("Image upload failed. Please try again.");
+    return;
+  }
+
+  uploadedMediaUrl = result;
+}
 
       await addDoc(collection(db, "posts"), {
         uid: currentUser.uid,
@@ -636,26 +663,26 @@ export default function App() {
     await signOut(auth);
   }
   async function deleteAccount() {
-  if (!currentUser) return;
+    if (!currentUser) return;
 
-  const confirmed = confirm(
-    "Are you sure you want to permanently delete your CityPeak account?"
-  );
-
-  if (!confirmed) return;
-
-  try {
-    await deleteDoc(doc(db, "users", currentUser.uid));
-    await deleteUser(currentUser);
-
-    alert("Account deleted.");
-  } catch (error: any) {
-    alert(
-      error.message ||
-        "Please log out and back in before deleting your account."
+    const confirmed = confirm(
+      "Are you sure you want to permanently delete your CityPeak account?"
     );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid));
+      await deleteUser(currentUser);
+
+      alert("Account deleted.");
+    } catch (error: any) {
+      alert(
+        error.message ||
+        "Please log out and back in before deleting your account."
+      );
+    }
   }
-}
 
   if (!firebaseReady) {
     return (
@@ -799,23 +826,23 @@ export default function App() {
                 {report.postText || report.commentText || "No text available"}
               </Text>
               {report.imageUri && report.mediaType === "video" && (
-  <AdminVideoPreview uri={report.imageUri} />
-)}
+                <AdminVideoPreview uri={report.imageUri} />
+              )}
 
-{report.imageUri && report.mediaType !== "video" && (
-  <Image
-    source={{ uri: report.imageUri }}
-    style={{
-      width: "100%",
-      height: 220,
-      borderRadius: 16,
-      marginTop: 12,
-      backgroundColor: "#0F172A",
-    }}
-  />
-)}
-              
-              
+              {report.imageUri && report.mediaType !== "video" && (
+                <Image
+                  source={{ uri: report.imageUri }}
+                  style={{
+                    width: "100%",
+                    height: 220,
+                    borderRadius: 16,
+                    marginTop: 12,
+                    backgroundColor: "#0F172A",
+                  }}
+                />
+              )}
+
+
 
               <Pressable
                 style={[styles.logoutButton, { marginTop: 12 }]}
@@ -843,15 +870,15 @@ export default function App() {
       {tab === "profile" && (
         <View style={{ flex: 1 }}>
           <ProfileScreen
-  username={username}
-  setUsername={setUsername}
-  bio={bio}
-  setBio={setBio}
-  photoUrl={photoUrl}
-  onSaveProfile={saveProfile}
-  onLogout={() => signOut(auth)}
-  onDeleteAccount={deleteAccount}
-/>
+            username={username}
+            setUsername={setUsername}
+            bio={bio}
+            setBio={setBio}
+            photoUrl={photoUrl}
+            onSaveProfile={saveProfile}
+            onLogout={() => signOut(auth)}
+            onDeleteAccount={deleteAccount}
+          />
 
 
         </View>
