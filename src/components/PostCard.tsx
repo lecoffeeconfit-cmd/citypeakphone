@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native"; import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
@@ -12,18 +12,30 @@ type PostCardProps = {
   onDeletePost?: (postId: string) => void;
   onReportPost?: (postId: string, reason: string) => void;
   onMessagePost?: () => void;
+  isActiveVideo?: boolean;
 };
 
 function PostVideo({
   uri,
   controls = true,
+  shouldPlay = false,
 }: {
   uri: string;
   controls?: boolean;
+  shouldPlay?: boolean;
 }) {
   const player = useVideoPlayer(uri, (player) => {
-    player.loop = false;
+    player.loop = true;
+    player.muted = true;
   });
+
+  useEffect(() => {
+    if (shouldPlay) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [shouldPlay, player]);
 
   return (
     <VideoView
@@ -44,6 +56,7 @@ export function PostCard({
   onDeletePost,
   onReportPost,
   onMessagePost,
+  isActiveVideo = false,
 }: PostCardProps) {
   const previewComments = post.comments.slice(0, 2);
   const isOwner = !!currentUserId && post.uid === currentUserId;
@@ -189,7 +202,7 @@ export function PostCard({
               position: "relative",
             }}
           >
-            <PostVideo uri={post.imageUri} controls={false} />
+            <PostVideo uri={post.imageUri} controls={false} shouldPlay={isActiveVideo} />
 
             <View
               style={{
@@ -360,7 +373,7 @@ export function PostCard({
                 justifyContent: "center",
               }}
             >
-              <PostVideo uri={post.imageUri} />
+              <PostVideo uri={post.imageUri} shouldPlay />
             </View>
           )}
 

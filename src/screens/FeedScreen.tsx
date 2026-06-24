@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
 import { postCategories } from "../types";
@@ -78,6 +78,19 @@ export function FeedScreen({
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
   const [postSearch, setPostSearch] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [activeVideoPostId, setActiveVideoPostId] = useState<string | null>(null);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 70,
+  }).current;
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    const visibleVideo = viewableItems.find(
+      (viewableItem: any) => viewableItem.item?.mediaType === "video"
+    );
+
+    setActiveVideoPostId(visibleVideo?.item?.id ?? null);
+  }).current;
 
   const filteredPosts = useMemo(() => {
     let areaPosts = posts.filter((post) => post.location === selectedArea);
@@ -115,6 +128,8 @@ export function FeedScreen({
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.feedList}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListHeaderComponent={
           <>
             <Pressable style={styles.searchPill} onPress={() => setTab("search")}>
@@ -314,6 +329,7 @@ export function FeedScreen({
             onDeletePost={onDeletePost}
             onReportPost={onReportPost}
             onMessagePost={() => onMessagePost(item)}
+            isActiveVideo={activeVideoPostId === item.id}
           />
         )}
       />
