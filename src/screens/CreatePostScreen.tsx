@@ -141,6 +141,10 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         value={text}
         onChangeText={setText}
         editable={!uploading}
+        autoCorrect={true}
+        spellCheck={true}
+        autoCapitalize="sentences"
+        keyboardType="default"
       />
 
       <Pressable
@@ -158,6 +162,21 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       )}
 
       {mediaUri && mediaType === "video" && <VideoPreview uri={mediaUri} />}
+
+      {mediaUri && (
+        <Pressable
+          style={[styles.secondaryButton, { marginTop: 10 }]}
+          onPress={() => {
+            setMediaUri(undefined);
+            setMediaType(undefined);
+          }}
+          disabled={uploading}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Remove Photo / Video
+          </Text>
+        </Pressable>
+      )}
 
       {uploading && (
         <View style={styles.uploadingCard}>
