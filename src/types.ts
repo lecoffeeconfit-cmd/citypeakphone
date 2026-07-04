@@ -30,6 +30,24 @@ export const postCategories: PostCategory[] = [
 ];
 
 export type MediaType = "image" | "video";
+export type MediaKind = "post" | "tutorial";
+
+export type PollOption = {
+  id: string;
+  text: string;
+  votes: number;
+};
+
+export type Poll = {
+  question: string;
+  options: PollOption[];
+  votedBy?: Record<string, string>;
+};
+
+export type PollDraft = {
+  question: string;
+  options: string[];
+};
 
 export type CommentReply = {
   id: string;
@@ -47,6 +65,8 @@ export type Comment = {
   text: string;
   likes?: number;
   dislikes?: number;
+  likedBy?: Record<string, boolean>;
+  dislikedBy?: Record<string, boolean>;
   replies?: Comment[];
   createdAt: number | string | any;
 };
@@ -63,8 +83,13 @@ photoUrl?: string;
   location: string;
   imageUri?: string;
   mediaType?: MediaType;
+  mediaKind?: MediaKind;
+  mediaDurationMs?: number;
+  mediaSizeBytes?: number;
+  poll?: Poll;
   createdAt?: any;
   reactions: Record<ReactionKey, number>;
+  reactedBy?: Record<string, ReactionKey>;
   comments: Comment[];
 };
 

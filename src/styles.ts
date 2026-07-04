@@ -10,9 +10,14 @@ export const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingBottom: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 10,
+  },
+
+  headerTitleArea: {
+    width: "100%",
+    minWidth: 0,
   },
 
   logo: {
@@ -28,6 +33,20 @@ export const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  signedInText: {
+    color: "#22C55E",
+    marginTop: 4,
+    fontWeight: "800",
+  },
+
+  headerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    gap: 8,
+    maxWidth: "100%",
+  },
+
   headerPill: {
     backgroundColor: "#1E293B",
     borderWidth: 1,
@@ -36,12 +55,14 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     maxWidth: 150,
+    flexShrink: 1,
   },
 
  headerPillText: {
   color: "#FFFFFF",
   fontWeight: "900",
   fontSize: 16,
+  textAlign: "center",
 },
 
   feedList: {
@@ -270,9 +291,18 @@ export const styles = StyleSheet.create({
     borderColor: "#334155",
   },
 
+  reactionSelected: {
+    backgroundColor: "#86B5CF",
+    borderColor: "#FFFFFF",
+  },
+
   reactionText: {
     color: "#FFFFFF",
     fontWeight: "900",
+  },
+
+  reactionTextSelected: {
+    color: "#003B57",
   },
 
  commentButton: {
@@ -351,6 +381,100 @@ export const styles = StyleSheet.create({
     textAlignVertical: "top",
     fontSize: 16,
     fontWeight: "700",
+  },
+
+  pollComposerCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 22,
+    padding: 14,
+    marginTop: 14,
+  },
+
+  pollComposerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+
+  pollComposerTitle: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  pollInput: {
+    backgroundColor: "#1E293B",
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 16,
+    padding: 12,
+    fontWeight: "800",
+  },
+
+  mediaModeCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 22,
+    padding: 14,
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  mediaModeSegment: {
+    flexDirection: "row",
+    backgroundColor: "#1E293B",
+    borderRadius: 999,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  mediaModeButton: {
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+
+  mediaModeButtonActive: {
+    backgroundColor: "#329BB8",
+  },
+
+  mediaModeText: {
+    color: "#94A3B8",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  mediaModeTextActive: {
+    color: "#FFFFFF",
+  },
+
+  mediaInfoCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    padding: 12,
+    marginTop: 10,
+  },
+
+  mediaInfoTitle: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
+  mediaInfoText: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    marginTop: 4,
+    lineHeight: 18,
   },
 
   primaryButton: {
@@ -503,6 +627,209 @@ statLabel: {
   marginTop: 3,
   fontWeight: "800",
 },
+
+  accountActionCard: {
+    backgroundColor: "#1E293B",
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: "#334155",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  accountIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#0F172A",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  accountIconText: {
+    color: "#86B5CF",
+    fontSize: 25,
+    fontWeight: "900",
+  },
+
+  accountKicker: {
+    color: "#86B5CF",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  accountTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  accountSubtitle: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    marginTop: 2,
+  },
+
+  accountLogoutButton: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+
+  accountLogoutText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
+  dangerActionCard: {
+    backgroundColor: "#450A0A",
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#991B1B",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  dangerIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#6B1F1F",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#991B1B",
+  },
+
+  dangerIconText: {
+    color: "#FCA5A5",
+    fontSize: 24,
+    fontWeight: "900",
+  },
+
+  dangerKicker: {
+    color: "#FCA5A5",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  dangerTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  dangerSubtitle: {
+    color: "#FECACA",
+    fontWeight: "800",
+    marginTop: 4,
+    lineHeight: 20,
+  },
+
+  dangerDeleteButton: {
+    backgroundColor: "#DC2626",
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+
+  dangerDeleteText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
+  legalActionCard: {
+    backgroundColor: "#0F172A",
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#2563EB",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  legalIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: "#1E293B",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  legalIconText: {
+    color: "#38BDF8",
+    fontSize: 24,
+    fontWeight: "900",
+  },
+
+  legalTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  legalSubtitle: {
+    color: "#CBD5E1",
+    fontWeight: "800",
+    marginTop: 4,
+    lineHeight: 20,
+  },
+
+  legalButtonColumn: {
+    gap: 9,
+  },
+
+  legalPillButton: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: "center",
+  },
+
+  legalPillText: {
+    color: "#38BDF8",
+    fontWeight: "900",
+  },
+
+  legalFootnote: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 16,
+    marginBottom: 24,
+  },
+
+  legalModalText: {
+    color: "#CBD5E1",
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: "700",
+    marginTop: 14,
+  },
 
   muted: {
     color: "#64748B",
@@ -670,6 +997,27 @@ statLabel: {
 marginBottom: 12,
   },
 
+  threadedCommentCard: {
+    marginLeft: 14,
+    marginTop: 12,
+    marginBottom: 6,
+    backgroundColor: "#0F172A",
+    borderLeftWidth: 3,
+    borderLeftColor: "#38BDF8",
+    paddingLeft: 14,
+  },
+
+  threadedCommentCardDeep: {
+    marginLeft: 0,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#329BB8",
+  },
+
+  commentReplies: {
+    marginTop: 6,
+  },
+
   commentAuthor: {
   color: "#FFFFFF",
   fontWeight: "800",
@@ -750,6 +1098,7 @@ marginBottom: 12,
 
   commentActionRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 14,
     marginTop: 8,
   },
@@ -758,6 +1107,96 @@ marginBottom: 12,
     color: "#329BB8",
     fontWeight: "900",
     fontSize: 12,
+  },
+
+  commentActionTextSelected: {
+    color: "#F8B400",
+  },
+
+  pollCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 22,
+    padding: 14,
+    marginBottom: 15,
+  },
+
+  pollHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  pollKicker: {
+    color: "#86B5CF",
+    fontWeight: "900",
+    fontSize: 12,
+    textTransform: "uppercase",
+  },
+
+  pollVoteCount: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+
+  pollQuestion: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 16,
+    lineHeight: 23,
+    marginBottom: 12,
+  },
+
+  pollOption: {
+    minHeight: 44,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  pollOptionSelected: {
+    borderColor: "#F8B400",
+  },
+
+  pollFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "#329BB8",
+    opacity: 0.55,
+  },
+
+  pollOptionContent: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  pollOptionText: {
+    color: "#FFFFFF",
+    flex: 1,
+    fontWeight: "900",
+  },
+
+  pollOptionTextSelected: {
+    color: "#F8B400",
+  },
+
+  pollPercent: {
+    color: "#E2E8F0",
+    fontWeight: "900",
+    minWidth: 40,
+    textAlign: "right",
   },
 
   feedToggleRow: {

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native"; import { useVideoPlayer, VideoView } from "expo-video";
+import { PollCard } from "./PollCard";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons } from "../types";
+import { getFeedImagePreviewUrl } from "../utils/media";
 import { timeAgo } from "../utils/timeAgo";
 
 type PostCardProps = {
@@ -12,7 +14,13 @@ type PostCardProps = {
   onDeletePost?: (postId: string) => void;
   onReportPost?: (postId: string, reason: string) => void;
   onMessagePost?: () => void;
-  isActiveVideo?: boolean;
+  onVotePoll?: (postId: string, optionId: string) => void;
+  onOpenUserProfile?: (target: {
+    uid?: string;
+    username?: string;
+    author?: string;
+    photoUrl?: string;
+  }) => void;
 };
 
 function PostVideo({
@@ -56,11 +64,55 @@ export function PostCard({
   onDeletePost,
   onReportPost,
   onMessagePost,
-  isActiveVideo = false,
+  onVotePoll,
+  onOpenUserProfile,
 }: PostCardProps) {
   const previewComments = post.comments.slice(0, 2);
   const isOwner = !!currentUserId && post.uid === currentUserId;
   const [mediaOpen, setMediaOpen] = useState(false);
+  const feedImageUri = useMemo(
+    () => getFeedImagePreviewUrl(post.imageUri),
+    [post.imageUri]
+  );
+  const profilePhotoUri = useMemo(
+    () => getFeedImagePreviewUrl(post.photoUrl),
+    [post.photoUrl]
+  );
+  const profilePhotoSource = useMemo(
+    () => (profilePhotoUri ? { uri: profilePhotoUri } : undefined),
+    [profilePhotoUri]
+  );
+  const feedImageSource = useMemo(
+    () => (feedImageUri ? { uri: feedImageUri } : undefined),
+    [feedImageUri]
+  );
+  const fullImageSource = useMemo(
+    () => (post.imageUri ? { uri: post.imageUri } : undefined),
+    [post.imageUri]
+  );
+  const selectedReaction = currentUserId ? post.reactedBy?.[currentUserId] : undefined;
+  const canOpenAuthorProfile = !post.anonymous && !!post.uid;
+
+  function openPostAuthorProfile() {
+    if (!canOpenAuthorProfile) return;
+
+    onOpenUserProfile?.({
+      uid: post.uid,
+      username: post.username,
+      author: post.author,
+      photoUrl: post.photoUrl,
+    });
+  }
+
+  function openCommentAuthorProfile(comment: Post["comments"][number]) {
+    if (!comment.uid || comment.author === "Anonymous") return;
+
+    onOpenUserProfile?.({
+      uid: comment.uid,
+      username: comment.username,
+      author: comment.author,
+    });
+  }
 
   function confirmDelete() {
     if (Platform.OS === "web") {
@@ -117,7 +169,9 @@ export function PostCard({
   return (
     <View style={styles.postCard}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
-        <View
+        <Pressable
+          onPress={openPostAuthorProfile}
+          disabled={!canOpenAuthorProfile}
           style={{
             width: 58,
             height: 58,
@@ -130,9 +184,9 @@ export function PostCard({
             overflow: "hidden",
           }}
         >
-          {!post.anonymous && post.photoUrl ? (
+          {!post.anonymous && profilePhotoSource ? (
             <Image
-              source={{ uri: post.photoUrl }}
+              source={profilePhotoSource}
               style={{
                 width: 58,
                 height: 58,
@@ -144,14 +198,18 @@ export function PostCard({
               {post.anonymous ? "👤" : post.author.replace("@", "")[0]?.toUpperCase()}
             </Text>
           )}
-        </View>
+        </Pressable>
 
-        <View style={{ flex: 1, marginLeft: 12 }}>
+        <Pressable
+          onPress={openPostAuthorProfile}
+          disabled={!canOpenAuthorProfile}
+          style={{ flex: 1, marginLeft: 12 }}
+        >
           <Text style={styles.author}>{post.author}</Text>
           <Text style={styles.location}>
             {post.location} • {timeAgo(post.createdAt)}
           </Text>
-        </View>
+        </Pressable>
 
         <View
           style={{
@@ -190,19 +248,54 @@ export function PostCard({
 
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
 
+      {post.poll && (
+        <PollCard
+          poll={post.poll}
+          currentUserId={currentUserId}
+          onVote={(optionId) => onVotePoll?.(post.id, optionId)}
+        />
+      )}
+
       {post.imageUri && post.mediaType === "video" && (
         <Pressable onPress={() => setMediaOpen(true)}>
           <View
             style={{
+              height: 220,
               borderRadius: 24,
               overflow: "hidden",
               borderWidth: 1,
               borderColor: "#334155",
               marginBottom: 15,
               position: "relative",
+              backgroundColor: "#0F172A",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <PostVideo uri={post.imageUri} controls={false} shouldPlay={isActiveVideo} />
+            <Text style={{ color: "white", fontSize: 42, fontWeight: "900" }}>
+              ▶
+            </Text>
+            <Text
+              style={{
+                color: "#CBD5E1",
+                fontWeight: "900",
+                marginTop: 8,
+              }}
+            >
+              Tap to load video
+            </Text>
+            {post.mediaKind === "tutorial" && (
+              <Text
+                style={{
+                  color: "#86B5CF",
+                  fontWeight: "900",
+                  marginTop: 5,
+                  fontSize: 12,
+                }}
+              >
+                Tutorial · opens on demand
+              </Text>
+            )}
 
             <View
               style={{
@@ -222,7 +315,7 @@ export function PostCard({
                   fontSize: 12,
                 }}
               >
-                ▶ VIDEO
+                {post.mediaKind === "tutorial" ? "▶ TUTORIAL" : "▶ VIDEO"}
               </Text>
             </View>
           </View>
@@ -233,11 +326,13 @@ export function PostCard({
         post.mediaType !== "video" &&
         !post.imageUri.startsWith("blob:") && (
           <Pressable onPress={() => setMediaOpen(true)}>
-            <Image
-              source={{ uri: post.imageUri }}
-              style={styles.postImage}
-              resizeMode="contain"
-            />
+            {feedImageSource && (
+              <Image
+                source={feedImageSource}
+                style={styles.postImage}
+                resizeMode="contain"
+              />
+            )}
           </Pressable>
         )}
 
@@ -253,10 +348,18 @@ export function PostCard({
         {reactionButtons.map((reaction) => (
           <Pressable
             key={reaction.key}
-            style={styles.reaction}
+            style={[
+              styles.reaction,
+              selectedReaction === reaction.key && styles.reactionSelected,
+            ]}
             onPress={() => onReact(post.id, reaction.key)}
           >
-            <Text style={styles.reactionText}>
+            <Text
+              style={[
+                styles.reactionText,
+                selectedReaction === reaction.key && styles.reactionTextSelected,
+              ]}
+            >
               {reaction.emoji} {post.reactions[reaction.key]}
             </Text>
           </Pressable>
@@ -317,7 +420,12 @@ export function PostCard({
         <View style={{ marginTop: 14 }}>
           {previewComments.map((comment) => (
             <View key={comment.id} style={styles.previewCommentCard}>
-              <Text style={styles.commentAuthor}>{comment.author}</Text>
+              <Pressable
+                onPress={() => openCommentAuthorProfile(comment)}
+                disabled={!comment.uid || comment.author === "Anonymous"}
+              >
+                <Text style={styles.commentAuthor}>{comment.author}</Text>
+              </Pressable>
               <Text style={styles.commentText}>{comment.text}</Text>
 
               <Text style={styles.previewCommentMeta}>
@@ -365,7 +473,7 @@ export function PostCard({
             <Text style={{ color: "white", fontWeight: "900" }}>Close</Text>
           </Pressable>
 
-          {post.imageUri && post.mediaType === "video" && (
+          {mediaOpen && post.imageUri && post.mediaType === "video" && (
             <View
               style={{
                 width: "100%",
@@ -377,7 +485,8 @@ export function PostCard({
             </View>
           )}
 
-          {post.imageUri &&
+          {mediaOpen &&
+            post.imageUri &&
             post.mediaType !== "video" &&
             !post.imageUri.startsWith("blob:") && (
               <ScrollView
@@ -391,14 +500,16 @@ export function PostCard({
                 minimumZoomScale={1}
                 centerContent
               >
-                <Image
-                  source={{ uri: post.imageUri }}
-                  style={{
-                    width: 360,
-                    height: 650,
-                  }}
-                  resizeMode="contain"
-                />
+                {fullImageSource && (
+                  <Image
+                    source={fullImageSource}
+                    style={{
+                      width: 360,
+                      height: 650,
+                    }}
+                    resizeMode="contain"
+                  />
+                )}
               </ScrollView>
             )}
         </View>

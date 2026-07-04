@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
 import { postCategories } from "../types";
@@ -9,6 +9,8 @@ type CategoryFilter = "All" | PostCategory;
 
 type FeedScreenProps = {
   posts: Post[];
+  hasMorePosts: boolean;
+  onLoadMorePosts: () => void;
   selectedArea: string;
   setTab: (tab: Tab) => void;
   onReact: (postId: string, reaction: ReactionKey) => void;
@@ -17,6 +19,13 @@ type FeedScreenProps = {
   onDeletePost: (postId: string) => void;
   onReportPost: (postId: string, reason: string) => void;
   onMessagePost: (post: Post) => void;
+  onVotePoll: (postId: string, optionId: string) => void;
+  onOpenUserProfile: (target: {
+    uid?: string;
+    username?: string;
+    author?: string;
+    photoUrl?: string;
+  }) => void;
 };
 
 const categoryFilters: CategoryFilter[] = ["All", ...postCategories];
@@ -65,6 +74,8 @@ function getCategoryEmoji(category: CategoryFilter) {
 
 export function FeedScreen({
   posts,
+  hasMorePosts,
+  onLoadMorePosts,
   selectedArea,
   setTab,
   onReact,
@@ -73,24 +84,13 @@ export function FeedScreen({
   onDeletePost,
   onReportPost,
   onMessagePost,
+  onVotePoll,
+  onOpenUserProfile,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
   const [postSearch, setPostSearch] = useState("");
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const [activeVideoPostId, setActiveVideoPostId] = useState<string | null>(null);
-
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 70,
-  }).current;
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    const visibleVideo = viewableItems.find(
-      (viewableItem: any) => viewableItem.item?.mediaType === "video"
-    );
-
-    setActiveVideoPostId(visibleVideo?.item?.id ?? null);
-  }).current;
 
   const filteredPosts = useMemo(() => {
     let areaPosts = posts.filter((post) => post.location === selectedArea);
@@ -128,8 +128,12 @@ export function FeedScreen({
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.feedList}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
+        onEndReached={() => {
+          if (hasMorePosts) {
+            onLoadMorePosts();
+          }
+        }}
+        onEndReachedThreshold={0.6}
         ListHeaderComponent={
           <>
             <Pressable style={styles.searchPill} onPress={() => setTab("search")}>
@@ -320,6 +324,13 @@ export function FeedScreen({
             </Text>
           </View>
         }
+        ListFooterComponent={
+          hasMorePosts ? (
+            <Pressable style={styles.secondaryButton} onPress={onLoadMorePosts}>
+              <Text style={styles.secondaryButtonText}>Load more posts</Text>
+            </Pressable>
+          ) : null
+        }
         renderItem={({ item }) => (
           <PostCard
             post={item}
@@ -329,7 +340,8 @@ export function FeedScreen({
             onDeletePost={onDeletePost}
             onReportPost={onReportPost}
             onMessagePost={() => onMessagePost(item)}
-            isActiveVideo={activeVideoPostId === item.id}
+            onVotePoll={onVotePoll}
+            onOpenUserProfile={onOpenUserProfile}
           />
         )}
       />

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { PollCard } from "./PollCard";
 import { styles } from "../styles";
 import type { Post, ReactionKey } from "../types";
 import { timeAgo } from "../utils/timeAgo";
@@ -17,6 +18,13 @@ type PostDetailsModalProps = {
   onReportPost?: (postId: string, reason: string) => void;
   onReportComment?: (postId: string, commentId: string, reason: string) => void;
   onDeleteComment?: (postId: string, commentId: string) => void;
+  onVotePoll?: (postId: string, optionId: string) => void;
+  onOpenUserProfile?: (target: {
+    uid?: string;
+    username?: string;
+    author?: string;
+    photoUrl?: string;
+  }) => void;
 };
 
 export function PostDetailsModal({
@@ -26,6 +34,9 @@ export function PostDetailsModal({
   onLikeComment,
   onDislikeComment,
   onAddReply,
+  currentUserId,
+  onVotePoll,
+  onOpenUserProfile,
 }: PostDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -42,6 +53,27 @@ export function PostDetailsModal({
 
   const activePost = localPost;
 
+  function openPostAuthorProfile() {
+    if (!activePost.uid || activePost.anonymous) return;
+
+    onOpenUserProfile?.({
+      uid: activePost.uid,
+      username: activePost.username,
+      author: activePost.author,
+      photoUrl: activePost.photoUrl,
+    });
+  }
+
+  function openCommentAuthorProfile(comment: any) {
+    if (!comment.uid || comment.author === "Anonymous") return;
+
+    onOpenUserProfile?.({
+      uid: comment.uid,
+      username: comment.username,
+      author: comment.author,
+    });
+  }
+
   function updateCommentCount(
     comments: any[],
     commentId: string,
@@ -49,9 +81,48 @@ export function PostDetailsModal({
   ): any[] {
     return comments.map((comment) => {
       if (comment.id === commentId) {
-        return {
+        if (!currentUserId) return comment;
+
+        const likedBy = { ...(comment.likedBy ?? {}) };
+        const dislikedBy = { ...(comment.dislikedBy ?? {}) };
+        const hasLiked = likedBy[currentUserId] === true;
+        const hasDisliked = dislikedBy[currentUserId] === true;
+        const nextComment = {
           ...comment,
-          [field]: (comment[field] ?? 0) + 1,
+          likes: comment.likes ?? 0,
+          dislikes: comment.dislikes ?? 0,
+          likedBy,
+          dislikedBy,
+        };
+
+        if (field === "likes") {
+          if (hasLiked) return nextComment;
+
+          nextComment.likes += 1;
+          likedBy[currentUserId] = true;
+
+          if (hasDisliked) {
+            nextComment.dislikes = Math.max(0, nextComment.dislikes - 1);
+            delete dislikedBy[currentUserId];
+          }
+
+          return nextComment;
+        }
+
+        if (hasDisliked) return nextComment;
+
+        nextComment.dislikes += 1;
+        dislikedBy[currentUserId] = true;
+
+        if (hasLiked) {
+          nextComment.likes = Math.max(0, nextComment.likes - 1);
+          delete likedBy[currentUserId];
+        }
+
+        return {
+          ...nextComment,
+          likedBy,
+          dislikedBy,
         };
       }
 
@@ -63,22 +134,24 @@ export function PostDetailsModal({
   }
 
   function renderComment(comment: any, depth = 0) {
+    const isReply = depth > 0;
+    const isDeepReply = depth > 1;
+
     return (
       <View
         key={comment.id}
         style={[
           styles.commentCard,
-          depth > 0 && {
-            marginLeft: 32,
-            marginTop: 14,
-            backgroundColor: "#0F172A",
-            borderLeftWidth: 3,
-            borderLeftColor: "#38BDF8",
-            paddingLeft: 16,
-          },
+          isReply && styles.threadedCommentCard,
+          isDeepReply && styles.threadedCommentCardDeep,
         ]}
       >
-        <Text style={styles.commentAuthor}>{comment.author}</Text>
+        <Pressable
+          onPress={() => openCommentAuthorProfile(comment)}
+          disabled={!comment.uid || comment.author === "Anonymous"}
+        >
+          <Text style={styles.commentAuthor}>{comment.author}</Text>
+        </Pressable>
         <Text style={styles.commentText}>{comment.text}</Text>
 
         <Text style={styles.previewCommentMeta}>
@@ -87,6 +160,7 @@ export function PostDetailsModal({
 
         <View style={styles.commentActionRow}>
           <Pressable
+            disabled={currentUserId ? comment.likedBy?.[currentUserId] === true : false}
             onPress={() => {
               setLocalPost((prev) => {
                 if (!prev) return prev;
@@ -104,12 +178,20 @@ export function PostDetailsModal({
               onLikeComment(activePost.id, comment.id);
             }}
           >
-            <Text style={styles.commentActionText}>
+            <Text
+              style={[
+                styles.commentActionText,
+                currentUserId &&
+                  comment.likedBy?.[currentUserId] === true &&
+                  styles.commentActionTextSelected,
+              ]}
+            >
               ❤️ Like {comment.likes ?? 0}
             </Text>
           </Pressable>
 
           <Pressable
+            disabled={currentUserId ? comment.dislikedBy?.[currentUserId] === true : false}
             onPress={() => {
               setLocalPost((prev) => {
                 if (!prev) return prev;
@@ -127,7 +209,14 @@ export function PostDetailsModal({
               onDislikeComment(activePost.id, comment.id);
             }}
           >
-            <Text style={styles.commentActionText}>
+            <Text
+              style={[
+                styles.commentActionText,
+                currentUserId &&
+                  comment.dislikedBy?.[currentUserId] === true &&
+                  styles.commentActionTextSelected,
+              ]}
+            >
               👎 Dislike {comment.dislikes ?? 0}
             </Text>
           </Pressable>
@@ -175,6 +264,8 @@ export function PostDetailsModal({
                       createdAt: Date.now(),
                       likes: 0,
                       dislikes: 0,
+                      likedBy: {},
+                      dislikedBy: {},
                       replies: [],
                     };
 
@@ -212,8 +303,12 @@ export function PostDetailsModal({
           </View>
         )}
 
-        {(comment.replies ?? []).map((reply: any) =>
-          renderComment(reply, depth + 1)
+        {(comment.replies ?? []).length > 0 && (
+          <View style={styles.commentReplies}>
+            {(comment.replies ?? []).map((reply: any) =>
+              renderComment(reply, depth + 1)
+            )}
+          </View>
         )}
       </View>
     );
@@ -232,12 +327,24 @@ export function PostDetailsModal({
 
           <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
             <View style={styles.postCard}>
-              <Text style={styles.author}>{localPost.author}</Text>
+              <Pressable
+                onPress={openPostAuthorProfile}
+                disabled={!localPost.uid || localPost.anonymous}
+              >
+                <Text style={styles.author}>{localPost.author}</Text>
+              </Pressable>
               <Text style={styles.location}>
                 {localPost.location} • {timeAgo(localPost.createdAt)}
               </Text>
 
               {!!localPost.text && <Text style={styles.postText}>{localPost.text}</Text>}
+              {!!localPost.poll && (
+                <PollCard
+                  poll={localPost.poll}
+                  currentUserId={currentUserId}
+                  onVote={(optionId) => onVotePoll?.(localPost.id, optionId)}
+                />
+              )}
               {!!localPost.imageUri && localPost.mediaType !== "video" && !localPost.imageUri.startsWith("blob:") && (
                 <Pressable
                   onPress={() => {

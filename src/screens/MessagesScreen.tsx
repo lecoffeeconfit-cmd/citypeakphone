@@ -89,6 +89,7 @@ export function MessagesScreen({
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const messagesListRef = useRef<FlatList>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
   const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
     setKeyboardVisible(true);
@@ -101,6 +102,9 @@ export function MessagesScreen({
   return () => {
     showSubscription.remove();
     hideSubscription.remove();
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
   };
 }, []);
 
@@ -378,7 +382,11 @@ export function MessagesScreen({
             style={{ flex: 1, marginTop: 16, zIndex: 1 }}
             contentContainerStyle={{ paddingBottom: 12 }}
             onContentSizeChange={() => {
-              setTimeout(() => {
+              if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+              }
+
+              scrollTimeoutRef.current = setTimeout(() => {
                 messagesListRef.current?.scrollToEnd({
                   animated: true,
                 });

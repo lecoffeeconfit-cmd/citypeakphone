@@ -1,11 +1,13 @@
 import "./global.css";
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
+import * as ImageManipulator from "expo-image-manipulator";
 import { decode } from "base64-arraybuffer";
 import { useVideoPlayer, VideoView } from "expo-video";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -19,7 +21,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  increment,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -46,13 +48,215 @@ import { styles } from "./src/styles";
 import type {
   Comment,
   MediaType,
+  MediaKind,
   Post,
   PostCategory,
+  PollDraft,
   ReactionKey,
   Tab,
 } from "./src/types";
+import { devLog, getFeedImagePreviewUrl } from "./src/utils/media";
 
-function AdminVideoPreview({ uri }: { uri: string }) {
+type PublicUserProfile = {
+  uid: string;
+  username: string;
+  email?: string;
+  bio?: string;
+  photoUrl?: string;
+  stats: {
+    posts: number;
+    reactions: number;
+    comments: number;
+    polls: number;
+    pollVotes: number;
+    areas: number;
+  };
+};
+
+type UserProfileTarget = {
+  uid?: string;
+  username?: string;
+  author?: string;
+  photoUrl?: string;
+};
+
+const REGULAR_VIDEO_MAX_MS = 60 * 1000;
+const TUTORIAL_VIDEO_MAX_MS = 10 * 60 * 1000;
+const REGULAR_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
+const TUTORIAL_VIDEO_MAX_BYTES = 250 * 1024 * 1024;
+
+function getPostStats(userPosts: Post[]) {
+  const totalReactions = userPosts.reduce((total, post) => {
+    return (
+      total +
+      Object.values(post.reactions ?? {}).reduce(
+        (reactionTotal, count) => reactionTotal + (count ?? 0),
+        0
+      )
+    );
+  }, 0);
+  const totalComments = userPosts.reduce(
+    (total, post) => total + (post.comments?.length ?? 0),
+    0
+  );
+  const pollPosts = userPosts.filter((post) => !!post.poll);
+  const pollVotes = pollPosts.reduce((total, post) => {
+    return (
+      total +
+      (post.poll?.options.reduce(
+        (optionTotal, option) => optionTotal + (option.votes ?? 0),
+        0
+      ) ?? 0)
+    );
+  }, 0);
+  const areas = new Set(
+    userPosts
+      .map((post) => post.location)
+      .filter((location): location is string => !!location)
+  );
+
+  return {
+    posts: userPosts.length,
+    reactions: totalReactions,
+    comments: totalComments,
+    polls: pollPosts.length,
+    pollVotes,
+    areas: areas.size,
+  };
+}
+
+function emptyStats() {
+  return {
+    posts: 0,
+    reactions: 0,
+    comments: 0,
+    polls: 0,
+    pollVotes: 0,
+    areas: 0,
+  };
+}
+
+function PublicUserProfileModal({
+  profile,
+  currentUserId,
+  onClose,
+  onMessage,
+}: {
+  profile: PublicUserProfile | null;
+  currentUserId?: string;
+  onClose: () => void;
+  onMessage: (profile: PublicUserProfile) => void;
+}) {
+  if (!profile) return null;
+
+  const displayPhoto = getFeedImagePreviewUrl(profile.photoUrl);
+  const isSelf = currentUserId === profile.uid;
+
+  return (
+    <Modal visible={!!profile} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Profile</Text>
+            <Pressable onPress={onClose}>
+              <Text style={styles.closeButton}>✕</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+            <View style={styles.profileCard}>
+              {displayPhoto ? (
+                <Image source={{ uri: displayPhoto }} style={styles.profilePhoto} />
+              ) : (
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>
+                    {profile.username[0]?.toUpperCase() || "?"}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={styles.profileName}>@{profile.username || "user"}</Text>
+
+              {!!profile.bio ? (
+                <View
+                  style={{
+                    marginTop: 16,
+                    backgroundColor: "#0F172A",
+                    borderWidth: 1,
+                    borderColor: "#334155",
+                    borderRadius: 16,
+                    padding: 16,
+                    marginHorizontal: 12,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#CBD5E1",
+                      textAlign: "center",
+                      fontSize: 15,
+                      lineHeight: 24,
+                    }}
+                  >
+                    {profile.bio}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: "#94A3B8", marginTop: 14, textAlign: "center" }}>
+                  No bio added yet.
+                </Text>
+              )}
+
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.posts}</Text>
+                  <Text style={styles.statLabel}>Posts</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.reactions}</Text>
+                  <Text style={styles.statLabel}>Reactions</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.areas}</Text>
+                  <Text style={styles.statLabel}>Areas</Text>
+                </View>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.comments}</Text>
+                  <Text style={styles.statLabel}>Comments</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.polls}</Text>
+                  <Text style={styles.statLabel}>Polls</Text>
+                </View>
+
+                <View style={styles.statBox}>
+                  <Text style={styles.statNumber}>{profile.stats.pollVotes}</Text>
+                  <Text style={styles.statLabel}>Poll Votes</Text>
+                </View>
+              </View>
+            </View>
+
+            {!isSelf && (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => onMessage(profile)}
+              >
+                <Text style={styles.primaryButtonText}>Message @{profile.username}</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function AdminLoadedVideo({ uri }: { uri: string }) {
   const player = useVideoPlayer(uri, (player) => {
     player.loop = false;
   });
@@ -72,6 +276,35 @@ function AdminVideoPreview({ uri }: { uri: string }) {
     />
   );
 }
+
+function AdminVideoPreview({ uri }: { uri: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  if (isLoaded) {
+    return <AdminLoadedVideo uri={uri} />;
+  }
+
+  return (
+    <Pressable
+      onPress={() => setIsLoaded(true)}
+      style={{
+        width: "100%",
+        height: 220,
+        borderRadius: 16,
+        marginTop: 12,
+        backgroundColor: "#0F172A",
+        borderWidth: 1,
+        borderColor: "#334155",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ color: "white", fontWeight: "900", fontSize: 18 }}>
+        Tap to load reported video
+      </Text>
+    </Pressable>
+  );
+}
 export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
@@ -81,13 +314,20 @@ export default function App() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [postingStatus, setPostingStatus] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] =
+    useState<PublicUserProfile | null>(null);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [profilePosts, setProfilePosts] = useState<Post[]>([]);
+  const [feedLimit, setFeedLimit] = useState(25);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [startingMessageUserId, setStartingMessageUserId] = useState<string | null>(null);
+  const postingStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedLoadingMoreRef = useRef(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -123,25 +363,54 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.uid) return;
 
     const q = query(
       collection(db, "posts"),
       orderBy("createdAt", "desc"),
-      limit(50)
+      limit(feedLimit + 1)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      devLog("[feed] posts snapshot received", {
+        requestedLimit: feedLimit,
+        snapshotSize: snapshot.size,
+      });
+
+      feedLoadingMoreRef.current = false;
       const firebasePosts: Post[] = snapshot.docs.map((snapDoc) => ({
         id: snapDoc.id,
         ...(snapDoc.data() as Omit<Post, "id">),
       }));
 
-      setPosts(firebasePosts);
+      setHasMorePosts(firebasePosts.length > feedLimit);
+      setPosts(firebasePosts.slice(0, feedLimit));
     });
 
     return unsubscribe;
-  }, [currentUser]);
+  }, [currentUser?.uid, feedLimit]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const q = query(
+      collection(db, "posts"),
+      where("uid", "==", currentUser.uid),
+      limit(100)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedPosts: Post[] = snapshot.docs.map((snapDoc) => ({
+        id: snapDoc.id,
+        ...(snapDoc.data() as Omit<Post, "id">),
+      }));
+
+      setProfilePosts(loadedPosts);
+    });
+
+    return unsubscribe;
+  }, [currentUser?.uid]);
+
   useEffect(() => {
     if (!selectedPost) return;
 
@@ -152,9 +421,17 @@ export default function App() {
     if (updatedPost) {
       setSelectedPost(updatedPost);
     }
-  }, [posts]);
+  }, [posts, selectedPost?.id]);
+
   useEffect(() => {
-    if (!currentUser) return;
+    return () => {
+      if (postingStatusTimeoutRef.current) {
+        clearTimeout(postingStatusTimeoutRef.current);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!currentUser?.uid) return;
 
     const q = query(
       collection(db, "messages"),
@@ -175,13 +452,13 @@ export default function App() {
     });
 
     return unsubscribe;
-  }, [currentUser]);
+  }, [currentUser?.uid]);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.uid) return;
     if (!isAdmin) return;
 
-    console.log("Starting reports listener for admin:", currentUser.uid);
+    devLog("[admin] starting reports listener", currentUser.uid);
 
     const q = query(
       collection(db, "reports"),
@@ -192,8 +469,7 @@ export default function App() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        console.log("========== REPORT SNAPSHOT ==========");
-        console.log("Snapshot size:", snapshot.size);
+        devLog("[admin] report snapshot received", snapshot.size);
 
         const loadedReports = snapshot.docs.map((reportDoc) => ({
           id: reportDoc.id,
@@ -210,21 +486,42 @@ export default function App() {
     );
 
     return unsubscribe;
-  }, [currentUser, isAdmin]);
+  }, [currentUser?.uid, isAdmin]);
+
+  async function prepareImageForUpload(uri: string) {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1600 } }],
+      {
+        compress: 0.72,
+        format: ImageManipulator.SaveFormat.JPEG,
+      }
+    );
+
+    devLog("[media] compressed image for upload", {
+      originalUri: uri,
+      compressedUri: result.uri,
+      width: result.width,
+      height: result.height,
+    });
+
+    return result.uri;
+  }
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
   try {
     const extension = mediaType === "video" ? "mp4" : "jpg";
     const fileName = `${Date.now()}.${extension}`;
     const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
+    const uploadUri = mediaType === "video" ? uri : await prepareImageForUpload(uri);
 
     let fileBody: Blob | ArrayBuffer;
 
     if (Platform.OS === "web") {
-      const response = await fetch(uri);
+      const response = await fetch(uploadUri);
       fileBody = await response.blob();
     } else {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
+      const base64 = await FileSystem.readAsStringAsync(uploadUri, {
         encoding: "base64",
       });
 
@@ -239,7 +536,7 @@ export default function App() {
       });
 
     if (error) {
-      console.log("SUPABASE ERROR:", error);
+      devLog("[media] supabase upload error", error);
       alert(JSON.stringify(error));
       return null;
     }
@@ -248,13 +545,46 @@ export default function App() {
       .from("images")
       .getPublicUrl(fileName);
 
+    devLog("[media] uploaded media to Supabase", {
+      mediaType,
+      fileName,
+    });
+
     return publicUrlData.publicUrl;
   } catch (error: any) {
-    console.log("UPLOAD MEDIA ERROR:", error);
+    devLog("[media] upload media error", error);
     alert(error.message || "Media upload failed.");
     return null;
   }
 }
+
+  function loadMoreFeedPosts() {
+    if (!hasMorePosts || feedLoadingMoreRef.current) return;
+
+    feedLoadingMoreRef.current = true;
+
+    setFeedLimit((currentLimit) => {
+      const nextLimit = currentLimit + 25;
+      devLog("[feed] increasing feed limit", nextLimit);
+      return nextLimit;
+    });
+  }
+
+  const reportImagePreviewSources = useMemo(() => {
+    const sources = new Map<string, { uri: string }>();
+
+    reports.forEach((report) => {
+      if (report.imageUri && report.mediaType !== "video") {
+        const previewUri = getFeedImagePreviewUrl(report.imageUri);
+
+        if (previewUri) {
+          sources.set(report.id, { uri: previewUri });
+        }
+      }
+    });
+
+    return sources;
+  }, [reports]);
 
   async function saveProfile(
     newUsername: string,
@@ -301,13 +631,42 @@ export default function App() {
     anonymous: boolean,
     mediaUri?: string,
     mediaType?: MediaType,
-    category?: PostCategory
+    category?: PostCategory,
+    poll?: PollDraft,
+    mediaKind?: MediaKind,
+    mediaDurationMs?: number,
+    mediaSizeBytes?: number
   ) {
     if (!currentUser) return;
 
     if (!category) {
       alert("Please choose a category.");
       return;
+    }
+
+    if (mediaType === "video") {
+      const maxDurationMs =
+        mediaKind === "tutorial" ? TUTORIAL_VIDEO_MAX_MS : REGULAR_VIDEO_MAX_MS;
+      const maxBytes =
+        mediaKind === "tutorial" ? TUTORIAL_VIDEO_MAX_BYTES : REGULAR_VIDEO_MAX_BYTES;
+
+      if (mediaDurationMs && mediaDurationMs > maxDurationMs) {
+        alert(
+          mediaKind === "tutorial"
+            ? "Tutorial videos can be up to 10 minutes."
+            : "Regular post videos can be up to 60 seconds."
+        );
+        return;
+      }
+
+      if (mediaSizeBytes && mediaSizeBytes > maxBytes) {
+        alert(
+          mediaKind === "tutorial"
+            ? "Tutorial videos must be 250 MB or less."
+            : "Regular post videos must be 80 MB or less."
+        );
+        return;
+      }
     }
 
     setPostingStatus(
@@ -326,7 +685,7 @@ export default function App() {
 
   if (!result) {
     setPostingStatus("");
-    alert("Image upload failed. Please try again.");
+    alert("Media upload failed. Please try again.");
     return;
   }
 
@@ -343,14 +702,33 @@ export default function App() {
         location: selectedArea,
         imageUri: uploadedMediaUrl,
         mediaType: mediaType || "",
+        mediaKind: mediaKind || "post",
+        mediaDurationMs: mediaDurationMs || null,
+        mediaSizeBytes: mediaSizeBytes || null,
+        poll: poll
+          ? {
+              question: poll.question,
+              options: poll.options.map((option, index) => ({
+                id: `${Date.now()}-${index}`,
+                text: option,
+                votes: 0,
+              })),
+              votedBy: {},
+            }
+          : null,
         reactions: { fire: 0, heart: 0, laugh: 0, wow: 0, dislike: 0 },
+        reactedBy: {},
         comments: [],
         createdAt: serverTimestamp(),
       });
 
       setPostingStatus("✅ Posted!");
 
-      setTimeout(() => {
+      if (postingStatusTimeoutRef.current) {
+        clearTimeout(postingStatusTimeoutRef.current);
+      }
+
+      postingStatusTimeoutRef.current = setTimeout(() => {
         setPostingStatus("");
       }, 2500);
     } catch (error: any) {
@@ -360,10 +738,69 @@ export default function App() {
   }
 
   async function reactToPost(postId: string, reaction: ReactionKey) {
-    const postRef = doc(db, "posts", postId);
+    if (!currentUser) return;
 
-    await updateDoc(postRef, {
-      [`reactions.${reaction}`]: increment(1),
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) return;
+
+    const previousReaction = targetPost.reactedBy?.[currentUser.uid];
+
+    if (previousReaction === reaction) return;
+
+    const nextReactions = {
+      fire: targetPost.reactions?.fire ?? 0,
+      heart: targetPost.reactions?.heart ?? 0,
+      laugh: targetPost.reactions?.laugh ?? 0,
+      wow: targetPost.reactions?.wow ?? 0,
+      dislike: targetPost.reactions?.dislike ?? 0,
+    };
+
+    if (previousReaction) {
+      nextReactions[previousReaction] = Math.max(
+        0,
+        (nextReactions[previousReaction] ?? 0) - 1
+      );
+    }
+
+    nextReactions[reaction] = (nextReactions[reaction] ?? 0) + 1;
+
+    await updateDoc(doc(db, "posts", postId), {
+      reactions: nextReactions,
+      [`reactedBy.${currentUser.uid}`]: reaction,
+    });
+  }
+
+  async function voteOnPoll(postId: string, optionId: string) {
+    if (!currentUser) return;
+
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost?.poll) return;
+
+    const previousOptionId = targetPost.poll.votedBy?.[currentUser.uid];
+
+    if (previousOptionId === optionId) return;
+
+    const nextOptions = targetPost.poll.options.map((option) => {
+      if (option.id === optionId) {
+        return {
+          ...option,
+          votes: (option.votes ?? 0) + 1,
+        };
+      }
+
+      if (previousOptionId && option.id === previousOptionId) {
+        return {
+          ...option,
+          votes: Math.max(0, (option.votes ?? 0) - 1),
+        };
+      }
+
+      return option;
+    });
+
+    await updateDoc(doc(db, "posts", postId), {
+      "poll.options": nextOptions,
+      [`poll.votedBy.${currentUser.uid}`]: optionId,
     });
   }
   async function deletePost(postId: string) {
@@ -374,7 +811,7 @@ export default function App() {
 
       alert("Post deleted");
     } catch (error: any) {
-      console.log(error);
+      devLog("[posts] delete post error", error);
       alert(error.message);
     }
   }
@@ -504,6 +941,8 @@ export default function App() {
       text,
       likes: 0,
       dislikes: 0,
+      likedBy: {},
+      dislikedBy: {},
       replies: [],
       createdAt: Date.now(),
     };
@@ -515,69 +954,99 @@ export default function App() {
     });
   }
 
-  function updateNestedCommentLike(
+  function updateNestedCommentReaction(
     comments: Comment[],
-    commentId: string
+    commentId: string,
+    userId: string,
+    reaction: "like" | "dislike"
   ): Comment[] {
     return comments.map((comment) => {
       if (comment.id === commentId) {
-        return {
+        const likedBy = { ...(comment.likedBy ?? {}) };
+        const dislikedBy = { ...(comment.dislikedBy ?? {}) };
+        const hasLiked = likedBy[userId] === true;
+        const hasDisliked = dislikedBy[userId] === true;
+        const nextComment = {
           ...comment,
-          likes: (comment.likes ?? 0) + 1,
+          likes: comment.likes ?? 0,
+          dislikes: comment.dislikes ?? 0,
+          likedBy,
+          dislikedBy,
           replies: comment.replies ?? [],
+        };
+
+        if (reaction === "like") {
+          if (hasLiked) return nextComment;
+
+          nextComment.likes += 1;
+          likedBy[userId] = true;
+
+          if (hasDisliked) {
+            nextComment.dislikes = Math.max(0, nextComment.dislikes - 1);
+            delete dislikedBy[userId];
+          }
+
+          return nextComment;
+        }
+
+        if (hasDisliked) return nextComment;
+
+        nextComment.dislikes += 1;
+        dislikedBy[userId] = true;
+
+        if (hasLiked) {
+          nextComment.likes = Math.max(0, nextComment.likes - 1);
+          delete likedBy[userId];
+        }
+
+        return {
+          ...nextComment,
+          likedBy,
+          dislikedBy,
         };
       }
 
       return {
         ...comment,
-        replies: updateNestedCommentLike(
+        replies: updateNestedCommentReaction(
           comment.replies ?? [],
-          commentId
+          commentId,
+          userId,
+          reaction
         ),
       };
     });
   }
 
   async function likeComment(postId: string, commentId: string) {
+    if (!currentUser) return;
+
     const targetPost = posts.find((post) => post.id === postId);
     if (!targetPost) return;
 
-    const updatedComments = updateNestedCommentLike(
+    const updatedComments = updateNestedCommentReaction(
       targetPost.comments ?? [],
-      commentId
+      commentId,
+      currentUser.uid,
+      "like"
     );
 
     await updateDoc(doc(db, "posts", postId), {
       comments: updatedComments,
     });
   }
-  function updateNestedCommentDislike(
-    comments: Comment[],
-    commentId: string
-  ): Comment[] {
-    return comments.map((comment) => {
-      if (comment.id === commentId) {
-        return {
-          ...comment,
-          dislikes: (comment.dislikes ?? 0) + 1,
-          replies: comment.replies ?? [],
-        };
-      }
-
-      return {
-        ...comment,
-        replies: updateNestedCommentDislike(comment.replies ?? [], commentId),
-      };
-    });
-  }
 
   async function dislikeComment(postId: string, commentId: string) {
+    if (!currentUser) return;
+
     const targetPost = posts.find((post) => post.id === postId);
     if (!targetPost) return;
 
-    const updatedComments = updateNestedCommentDislike(
+    const updatedComments = updateNestedCommentReaction(
       targetPost.comments ?? [],
-      commentId
+      commentId,
+      currentUser.uid,
+      "dislike"
     );
 
     await updateDoc(doc(db, "posts", postId), {
@@ -624,6 +1093,8 @@ export default function App() {
       text,
       likes: 0,
       dislikes: 0,
+      likedBy: {},
+      dislikedBy: {},
       replies: [],
       createdAt: Date.now(),
     };
@@ -684,6 +1155,71 @@ export default function App() {
     }
   }
 
+  const profileStats = useMemo(() => {
+    return getPostStats(profilePosts);
+  }, [profilePosts]);
+
+  async function openUserProfile(target: UserProfileTarget) {
+    if (!target.uid) return;
+
+    const fallbackUsername =
+      target.username ||
+      target.author?.replace("@", "") ||
+      "user";
+
+    setSelectedUserProfile({
+      uid: target.uid,
+      username: fallbackUsername,
+      photoUrl: target.photoUrl,
+      stats: emptyStats(),
+    });
+
+    try {
+      const [userDoc, userPostsSnapshot] = await Promise.all([
+        getDoc(doc(db, "users", target.uid)),
+        getDocs(
+          query(
+            collection(db, "posts"),
+            where("uid", "==", target.uid),
+            limit(100)
+          )
+        ),
+      ]);
+      const userData = userDoc.exists() ? userDoc.data() : {};
+      const loadedPosts: Post[] = userPostsSnapshot.docs.map((snapDoc) => ({
+        id: snapDoc.id,
+        ...(snapDoc.data() as Omit<Post, "id">),
+      }));
+
+      setSelectedUserProfile({
+        uid: target.uid,
+        username:
+          userData.username ||
+          fallbackUsername,
+        email: userData.email,
+        bio: userData.bio || "",
+        photoUrl: userData.photoUrl || target.photoUrl || "",
+        stats: getPostStats(loadedPosts),
+      });
+    } catch (error) {
+      devLog("[profile] failed to load public user profile", error);
+    }
+  }
+
+  function messageUserFromProfile(profile: PublicUserProfile) {
+    if (!currentUser) return;
+
+    if (profile.uid === currentUser.uid) {
+      setSelectedUserProfile(null);
+      setTab("profile");
+      return;
+    }
+
+    setSelectedUserProfile(null);
+    setStartingMessageUserId(profile.uid);
+    setTab("messages");
+  }
+
   if (!firebaseReady) {
     return (
       <SafeAreaView style={styles.container}>
@@ -702,16 +1238,16 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerTitleArea}>
           <Text style={styles.logo}>CityPeak</Text>
           <Text style={styles.subtitle}>Local anonymous city feeds</Text>
 
-          <Text style={{ color: "#22C55E", marginTop: 4, fontWeight: "800" }}>
+          <Text style={styles.signedInText}>
             Signed in as @{username}
           </Text>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={styles.headerActions}>
           {isAdmin && (
             <Pressable style={styles.headerPill} onPress={() => setTab("admin" as Tab)}>
               <Text style={styles.headerPillText}>Admin</Text>
@@ -762,6 +1298,8 @@ export default function App() {
       {tab === "feed" && (
         <FeedScreen
           posts={posts}
+          hasMorePosts={hasMorePosts}
+          onLoadMorePosts={loadMoreFeedPosts}
           selectedArea={selectedArea}
           setTab={setTab}
           onReact={reactToPost}
@@ -770,6 +1308,8 @@ export default function App() {
           onDeletePost={deletePost}
           onReportPost={reportPost}
           onMessagePost={startMessageFromPost}
+          onVotePoll={voteOnPoll}
+          onOpenUserProfile={openUserProfile}
         />
       )}
 
@@ -831,7 +1371,7 @@ export default function App() {
 
               {report.imageUri && report.mediaType !== "video" && (
                 <Image
-                  source={{ uri: report.imageUri }}
+                  source={reportImagePreviewSources.get(report.id) ?? { uri: report.imageUri }}
                   style={{
                     width: "100%",
                     height: 220,
@@ -875,6 +1415,8 @@ export default function App() {
             bio={bio}
             setBio={setBio}
             photoUrl={photoUrl}
+            email={currentUser.email}
+            stats={profileStats}
             onSaveProfile={saveProfile}
             onLogout={() => signOut(auth)}
             onDeleteAccount={deleteAccount}
@@ -902,6 +1444,14 @@ export default function App() {
         onReportComment={reportComment}
         onDeleteComment={deleteComment}
         onDislikeComment={dislikeComment}
+        onVotePoll={voteOnPoll}
+        onOpenUserProfile={openUserProfile}
+      />
+      <PublicUserProfileModal
+        profile={selectedUserProfile}
+        currentUserId={currentUser?.uid}
+        onClose={() => setSelectedUserProfile(null)}
+        onMessage={messageUserFromProfile}
       />
     </SafeAreaView>
   );
