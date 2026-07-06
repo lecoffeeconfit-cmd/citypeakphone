@@ -26,6 +26,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { styles } from "../styles";
+import { countUsage } from "../utils/usageAudit";
 
 type MessagesScreenProps = {
   currentUser: User;
@@ -91,6 +92,7 @@ export function MessagesScreen({
   const messagesListRef = useRef<FlatList>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+  countUsage("messages-keyboard-listeners-create");
   const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
     setKeyboardVisible(true);
   });
@@ -100,6 +102,7 @@ export function MessagesScreen({
   });
 
   return () => {
+    countUsage("messages-keyboard-listeners-cleanup");
     showSubscription.remove();
     hideSubscription.remove();
     if (scrollTimeoutRef.current) {
@@ -109,16 +112,23 @@ export function MessagesScreen({
 }, []);
 
   useEffect(() => {
+    countUsage("listener-create:messages-blocked-user");
     const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (userDoc) => {
+      countUsage("messages-blocked-user-snapshot");
       const data = userDoc.data();
       setBlockedUserIds(data?.blockedUserIds ?? []);
     });
 
-    return unsubscribe;
+    return () => {
+      countUsage("listener-cleanup:messages-blocked-user");
+      unsubscribe();
+    };
   }, [currentUser.uid]);
 
   useEffect(() => {
+    countUsage("listener-create:messages-users");
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
+      countUsage("messages-users-snapshot", snapshot.size);
       const loadedUsers: AppUser[] = snapshot.docs
         .map((userDoc) => ({
           id: userDoc.id,
@@ -129,16 +139,21 @@ export function MessagesScreen({
       setUsers(loadedUsers);
     });
 
-    return unsubscribe;
+    return () => {
+      countUsage("listener-cleanup:messages-users");
+      unsubscribe();
+    };
   }, [currentUser.uid]);
 
   useEffect(() => {
+    countUsage("listener-create:messages-thread-list");
     const q = query(
       collection(db, "messages"),
       where("participants", "array-contains", currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      countUsage("messages-thread-list-snapshot", snapshot.size);
       const loadedMessages: Message[] = snapshot.docs
         .map((messageDoc) => ({
           id: messageDoc.id,
@@ -153,7 +168,10 @@ export function MessagesScreen({
       setAllMessages(loadedMessages);
     });
 
-    return unsubscribe;
+    return () => {
+      countUsage("listener-cleanup:messages-thread-list");
+      unsubscribe();
+    };
   }, [currentUser.uid]);
 
   useEffect(() => {

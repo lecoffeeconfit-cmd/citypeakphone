@@ -1,24 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { Image, Modal, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { PollCard } from "./PollCard";
 import { styles } from "../styles";
-import type { Post, ReactionKey } from "../types";
+import type { Coordinates, Post, ReactionKey } from "../types";
+import { formatDistanceAway } from "../utils/distance";
+import { formatExpirationLabel, getExpirationTimestamp } from "../utils/expiration";
+import { devLog, getStableImageSource } from "../utils/media";
+import { getPostFieldRows } from "../utils/postTypes";
 import { timeAgo } from "../utils/timeAgo";
 
 type PostDetailsModalProps = {
   post: Post | null;
   onClose: () => void;
   onReact: (postId: string, reaction: ReactionKey) => void;
-  onAddComment: (postId: string, text: string, anonymous: boolean) => void;
+  onAddComment: (postId: string, text: string) => void;
   onLikeComment: (postId: string, commentId: string) => void;
   onDislikeComment: (postId: string, commentId: string) => void;
-  onAddReply: (postId: string, commentId: string, text: string, anonymous: boolean) => void;
+  onAddReply: (postId: string, commentId: string, text: string) => void;
   currentUserId?: string;
   onDeletePost?: (postId: string) => void;
   onReportPost?: (postId: string, reason: string) => void;
   onReportComment?: (postId: string, commentId: string, reason: string) => void;
   onDeleteComment?: (postId: string, commentId: string) => void;
   onVotePoll?: (postId: string, optionId: string) => void;
+  userCoordinates?: Coordinates | null;
   onOpenUserProfile?: (target: {
     uid?: string;
     username?: string;
@@ -36,12 +41,12 @@ export function PostDetailsModal({
   onAddReply,
   currentUserId,
   onVotePoll,
+  userCoordinates,
   onOpenUserProfile,
 }: PostDetailsModalProps) {
   const [commentText, setCommentText] = useState("");
   const [replyText, setReplyText] = useState("");
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
-  const [anonymous, setAnonymous] = useState(true);
   const [localPost, setLocalPost] = useState<Post | null>(post);
   const [imagePreviewUri, setImagePreviewUri] = useState<string | null>(null);
 
@@ -52,9 +57,22 @@ export function PostDetailsModal({
   if (!localPost) return null;
 
   const activePost = localPost;
+  const distanceLabel = formatDistanceAway(userCoordinates, localPost.postCoordinates);
+  const expirationLabel = formatExpirationLabel(localPost.expiresAt);
+  const isExpired =
+    !!localPost.expiresAt && (getExpirationTimestamp(localPost.expiresAt) ?? 0) < Date.now();
+  const postFieldRows = getPostFieldRows(localPost.postFields);
+  const detailImageSource = getStableImageSource(
+    localPost.imageThumbnailUri || localPost.imageUri,
+    `post ${localPost.id} detail image`
+  );
+  const previewImageSource = getStableImageSource(
+    imagePreviewUri,
+    `post ${localPost.id} preview image`
+  );
 
   function openPostAuthorProfile() {
-    if (!activePost.uid || activePost.anonymous) return;
+    if (!activePost.uid) return;
 
     onOpenUserProfile?.({
       uid: activePost.uid,
@@ -65,7 +83,7 @@ export function PostDetailsModal({
   }
 
   function openCommentAuthorProfile(comment: any) {
-    if (!comment.uid || comment.author === "Anonymous") return;
+    if (!comment.uid) return;
 
     onOpenUserProfile?.({
       uid: comment.uid,
@@ -148,7 +166,7 @@ export function PostDetailsModal({
       >
         <Pressable
           onPress={() => openCommentAuthorProfile(comment)}
-          disabled={!comment.uid || comment.author === "Anonymous"}
+          disabled={!comment.uid}
         >
           <Text style={styles.commentAuthor}>{comment.author}</Text>
         </Pressable>
@@ -260,7 +278,7 @@ export function PostDetailsModal({
                     const newReply = {
                       id: Date.now().toString(),
                       text: replyText.trim(),
-                      author: anonymous ? "Anonymous" : "You",
+                      author: "You",
                       createdAt: Date.now(),
                       likes: 0,
                       dislikes: 0,
@@ -290,7 +308,7 @@ export function PostDetailsModal({
                       comments: addReplyLocally(activePost.comments ?? []),
                     });
 
-                    onAddReply(activePost.id, comment.id, replyText.trim(), anonymous);
+                    onAddReply(activePost.id, comment.id, replyText.trim());
 
                     setReplyText("");
                     setReplyingToCommentId(null);
@@ -329,15 +347,71 @@ export function PostDetailsModal({
             <View style={styles.postCard}>
               <Pressable
                 onPress={openPostAuthorProfile}
-                disabled={!localPost.uid || localPost.anonymous}
+                disabled={!localPost.uid}
               >
                 <Text style={styles.author}>{localPost.author}</Text>
               </Pressable>
               <Text style={styles.location}>
                 {localPost.location} • {timeAgo(localPost.createdAt)}
               </Text>
+              <View style={styles.postApiMeta}>
+                <Text style={styles.postApiMetaText}>
+                  📍 GPS location: {localPost.postCoordinates ? "Device GPS" : "Not saved"}
+                </Text>
+                <Text style={styles.postApiMetaText}>
+                  📏 Distance:{" "}
+                  {distanceLabel ||
+                    (userCoordinates ? "Post distance unavailable" : "Enable location")}
+                </Text>
+                <Text style={styles.postApiMetaText}>
+                  👁 Views: {localPost.engagement?.views ?? 0}
+                </Text>
+              </View>
+
+              {!!expirationLabel && (
+                <View style={[styles.expirationBadge, isExpired && styles.expirationBadgeExpired]}>
+                  <Text
+                    style={[
+                      styles.expirationBadgeText,
+                      isExpired && styles.expirationBadgeTextExpired,
+                    ]}
+                  >
+                    ⏳ {expirationLabel}
+                  </Text>
+                </View>
+              )}
+
+              {!!localPost.tags?.length && (
+                <View style={styles.postTagRow}>
+                  {localPost.tags.slice(0, 5).map((tag) => (
+                    <Text key={tag} style={styles.postTag}>
+                      #{tag}
+                    </Text>
+                  ))}
+                </View>
+              )}
 
               {!!localPost.text && <Text style={styles.postText}>{localPost.text}</Text>}
+              {localPost.postType === "sale" && (
+                <View style={styles.saleCard}>
+                  <Text style={styles.saleKicker}>For sale</Text>
+                  <Text style={styles.saleTitle}>{localPost.saleTitle}</Text>
+                  <Text style={styles.salePrice}>{localPost.salePrice}</Text>
+                  {!!localPost.saleCondition && (
+                    <Text style={styles.saleMeta}>{localPost.saleCondition}</Text>
+                  )}
+                </View>
+              )}
+              {postFieldRows.length > 0 && (
+                <View style={styles.postFieldsCard}>
+                  {postFieldRows.map((field) => (
+                    <View key={field.key} style={styles.postFieldRow}>
+                      <Text style={styles.postFieldLabel}>{field.label}</Text>
+                      <Text style={styles.postFieldValue}>{field.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               {!!localPost.poll && (
                 <PollCard
                   poll={localPost.poll}
@@ -345,16 +419,16 @@ export function PostDetailsModal({
                   onVote={(optionId) => onVotePoll?.(localPost.id, optionId)}
                 />
               )}
-              {!!localPost.imageUri && localPost.mediaType !== "video" && !localPost.imageUri.startsWith("blob:") && (
+              {!!detailImageSource && localPost.mediaType !== "video" && (
                 <Pressable
                   onPress={() => {
-                    if (localPost.imageUri) {
-                      setImagePreviewUri(localPost.imageUri);
+                    if (detailImageSource?.uri) {
+                      setImagePreviewUri(detailImageSource.uri);
                     }
                   }}
                 >
                   <Image
-                    source={{ uri: localPost.imageUri }}
+                    source={detailImageSource}
                     style={{
                       width: "100%",
                       height: 300,
@@ -363,6 +437,8 @@ export function PostDetailsModal({
                       backgroundColor: "#0F172A",
                     }}
                     resizeMode="cover"
+                    onLoad={() => devLog("[media] loaded post detail image", localPost.imageThumbnailUri || localPost.imageUri)}
+                    onError={() => devLog("[media] failed post detail image", localPost.imageThumbnailUri || localPost.imageUri)}
                   />
                 </Pressable>
               )}
@@ -388,14 +464,11 @@ export function PostDetailsModal({
               />
 
               <View style={styles.commentControls}>
-                <Text style={styles.switchHelp}>Anon</Text>
-                <Switch value={anonymous} onValueChange={setAnonymous} />
-
                 <Pressable
                   style={styles.sendButton}
                   onPress={() => {
                     if (commentText.trim()) {
-                      onAddComment(localPost.id, commentText.trim(), anonymous);
+                      onAddComment(localPost.id, commentText.trim());
                       setCommentText("");
                     }
                   }}
@@ -443,14 +516,16 @@ export function PostDetailsModal({
             minimumZoomScale={1}
             centerContent
           >
-            {imagePreviewUri && !imagePreviewUri.startsWith("blob:") && (
+            {previewImageSource && (
               <Image
-                source={{ uri: imagePreviewUri }}
+                source={previewImageSource}
                 style={{
                   width: "100%",
                   height: 700,
                 }}
                 resizeMode="contain"
+                onLoad={() => devLog("[media] loaded post preview image", imagePreviewUri)}
+                onError={() => devLog("[media] failed post preview image", imagePreviewUri)}
               />
             )}
           </ScrollView>

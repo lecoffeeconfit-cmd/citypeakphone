@@ -1,10 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native"; import { useVideoPlayer, VideoView } from "expo-video";
 import { PollCard } from "./PollCard";
 import { styles } from "../styles";
-import { Post, ReactionKey, reactionButtons } from "../types";
-import { getFeedImagePreviewUrl } from "../utils/media";
+import { Post, ReactionKey, reactionButtons, type Coordinates } from "../types";
+import { formatDistanceAway } from "../utils/distance";
+import { formatExpirationLabel, getExpirationTimestamp } from "../utils/expiration";
+import { devLog, getStableImageSource, normalizeMediaUri } from "../utils/media";
+import { getPostFieldRows, getPostTypeOption } from "../utils/postTypes";
 import { timeAgo } from "../utils/timeAgo";
+import { countUsage } from "../utils/usageAudit";
 
 type PostCardProps = {
   post: Post;
@@ -15,6 +19,9 @@ type PostCardProps = {
   onReportPost?: (postId: string, reason: string) => void;
   onMessagePost?: () => void;
   onVotePoll?: (postId: string, optionId: string) => void;
+  onSavePost?: (postId: string) => void;
+  onSharePost?: (post: Post) => void;
+  userCoordinates?: Coordinates | null;
   onOpenUserProfile?: (target: {
     uid?: string;
     username?: string;
@@ -39,6 +46,7 @@ function PostVideo({
 
   useEffect(() => {
     if (shouldPlay) {
+      countUsage("video-load:post-modal");
       player.play();
     } else {
       player.pause();
@@ -56,7 +64,7 @@ function PostVideo({
   );
 }
 
-export function PostCard({
+function PostCardComponent({
   post,
   onReact,
   onOpen,
@@ -65,33 +73,42 @@ export function PostCard({
   onReportPost,
   onMessagePost,
   onVotePoll,
+  onSavePost,
+  onSharePost,
+  userCoordinates,
   onOpenUserProfile,
 }: PostCardProps) {
   const previewComments = post.comments.slice(0, 2);
   const isOwner = !!currentUserId && post.uid === currentUserId;
   const [mediaOpen, setMediaOpen] = useState(false);
-  const feedImageUri = useMemo(
-    () => getFeedImagePreviewUrl(post.imageUri),
-    [post.imageUri]
-  );
-  const profilePhotoUri = useMemo(
-    () => getFeedImagePreviewUrl(post.photoUrl),
-    [post.photoUrl]
-  );
   const profilePhotoSource = useMemo(
-    () => (profilePhotoUri ? { uri: profilePhotoUri } : undefined),
-    [profilePhotoUri]
+    () => getStableImageSource(post.photoUrl, `post ${post.id} author photo`),
+    [post.photoUrl, post.id]
   );
   const feedImageSource = useMemo(
-    () => (feedImageUri ? { uri: feedImageUri } : undefined),
-    [feedImageUri]
+    () =>
+      getStableImageSource(
+        post.imageThumbnailUri || post.imageUri,
+        `post ${post.id} feed image`
+      ),
+    [post.imageThumbnailUri, post.imageUri, post.id]
   );
   const fullImageSource = useMemo(
-    () => (post.imageUri ? { uri: post.imageUri } : undefined),
-    [post.imageUri]
+    () => getStableImageSource(post.imageUri, `post ${post.id} full image`),
+    [post.imageUri, post.id]
+  );
+  const videoUri = useMemo(
+    () => normalizeMediaUri(post.mediaType === "video" ? post.imageUri : undefined),
+    [post.imageUri, post.mediaType]
   );
   const selectedReaction = currentUserId ? post.reactedBy?.[currentUserId] : undefined;
-  const canOpenAuthorProfile = !post.anonymous && !!post.uid;
+  const canOpenAuthorProfile = !!post.uid;
+  const distanceLabel = formatDistanceAway(userCoordinates, post.postCoordinates);
+  const expirationLabel = formatExpirationLabel(post.expiresAt);
+  const isExpired = !!post.expiresAt && (getExpirationTimestamp(post.expiresAt) ?? 0) < Date.now();
+  const isSaved = !!currentUserId && !!post.savedBy?.[currentUserId];
+  const postTypeOption = getPostTypeOption(post.postType);
+  const postFieldRows = getPostFieldRows(post.postFields);
 
   function openPostAuthorProfile() {
     if (!canOpenAuthorProfile) return;
@@ -105,7 +122,7 @@ export function PostCard({
   }
 
   function openCommentAuthorProfile(comment: Post["comments"][number]) {
-    if (!comment.uid || comment.author === "Anonymous") return;
+    if (!comment.uid) return;
 
     onOpenUserProfile?.({
       uid: comment.uid,
@@ -184,7 +201,7 @@ export function PostCard({
             overflow: "hidden",
           }}
         >
-          {!post.anonymous && profilePhotoSource ? (
+          {profilePhotoSource ? (
             <Image
               source={profilePhotoSource}
               style={{
@@ -192,10 +209,12 @@ export function PostCard({
                 height: 58,
                 borderRadius: 29,
               }}
+              onLoad={() => devLog("[media] loaded post author photo", post.photoUrl)}
+              onError={() => devLog("[media] failed post author photo", post.photoUrl)}
             />
           ) : (
             <Text style={{ color: "#CBD5E1", fontSize: 24, fontWeight: "900" }}>
-              {post.anonymous ? "👤" : post.author.replace("@", "")[0]?.toUpperCase()}
+              {post.author.replace("@", "")[0]?.toUpperCase() || "U"}
             </Text>
           )}
         </Pressable>
@@ -209,20 +228,39 @@ export function PostCard({
           <Text style={styles.location}>
             {post.location} • {timeAgo(post.createdAt)}
           </Text>
+          <View style={styles.postApiMeta}>
+            <Text style={styles.postApiMetaText}>
+              📍 GPS location: {post.postCoordinates ? "Device GPS" : "Not saved"}
+            </Text>
+            <Text style={styles.postApiMetaText}>
+              📏 Distance:{" "}
+              {distanceLabel ||
+                (userCoordinates ? "Post distance unavailable" : "Enable location")}
+            </Text>
+            <Text style={styles.postApiMetaText}>
+              👁 Views: {post.engagement?.views ?? 0}
+            </Text>
+          </View>
         </Pressable>
 
         <View
           style={{
-            backgroundColor: post.anonymous ? "#0F172A" : "#329BB8",
+            backgroundColor: post.postType === "sale" ? "#F8B400" : "#329BB8",
             borderRadius: 999,
             paddingVertical: 7,
             paddingHorizontal: 12,
             borderWidth: 1,
-            borderColor: post.anonymous ? "#334155" : "#329BB8",
+            borderColor: post.postType === "sale" ? "#F8B400" : "#329BB8",
           }}
         >
-          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 11 }}>
-            {post.anonymous ? "Anonymous" : "Local"}
+          <Text
+            style={{
+              color: post.postType === "sale" ? "#003B57" : "#FFFFFF",
+              fontWeight: "900",
+              fontSize: 11,
+            }}
+          >
+            {postTypeOption.emoji} {postTypeOption.label}
           </Text>
         </View>
       </View>
@@ -246,7 +284,47 @@ export function PostCard({
         </View>
       )}
 
+      {!!expirationLabel && (
+        <View style={[styles.expirationBadge, isExpired && styles.expirationBadgeExpired]}>
+          <Text style={[styles.expirationBadgeText, isExpired && styles.expirationBadgeTextExpired]}>
+            ⏳ {expirationLabel}
+          </Text>
+        </View>
+      )}
+
+      {!!post.tags?.length && (
+        <View style={styles.postTagRow}>
+          {post.tags.slice(0, 5).map((tag) => (
+            <Text key={tag} style={styles.postTag}>
+              #{tag}
+            </Text>
+          ))}
+        </View>
+      )}
+
       {!!post.text && <Text style={styles.postText}>{post.text}</Text>}
+
+      {post.postType === "sale" && (
+        <View style={styles.saleCard}>
+          <Text style={styles.saleKicker}>For sale</Text>
+          <Text style={styles.saleTitle}>{post.saleTitle}</Text>
+          <Text style={styles.salePrice}>{post.salePrice}</Text>
+          {!!post.saleCondition && (
+            <Text style={styles.saleMeta}>{post.saleCondition}</Text>
+          )}
+        </View>
+      )}
+
+      {postFieldRows.length > 0 && (
+        <View style={styles.postFieldsCard}>
+          {postFieldRows.slice(0, 8).map((field) => (
+            <View key={field.key} style={styles.postFieldRow}>
+              <Text style={styles.postFieldLabel}>{field.label}</Text>
+              <Text style={styles.postFieldValue}>{field.value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {post.poll && (
         <PollCard
@@ -256,7 +334,7 @@ export function PostCard({
         />
       )}
 
-      {post.imageUri && post.mediaType === "video" && (
+      {videoUri && post.mediaType === "video" && (
         <Pressable onPress={() => setMediaOpen(true)}>
           <View
             style={{
@@ -322,17 +400,16 @@ export function PostCard({
         </Pressable>
       )}
 
-      {post.imageUri &&
-        post.mediaType !== "video" &&
-        !post.imageUri.startsWith("blob:") && (
+      {post.mediaType !== "video" &&
+        feedImageSource && (
           <Pressable onPress={() => setMediaOpen(true)}>
-            {feedImageSource && (
-              <Image
-                source={feedImageSource}
-                style={styles.postImage}
-                resizeMode="contain"
-              />
-            )}
+            <Image
+              source={feedImageSource}
+              style={styles.postImage}
+              resizeMode="contain"
+              onLoad={() => devLog("[media] loaded post feed image", post.imageThumbnailUri || post.imageUri)}
+              onError={() => devLog("[media] failed post feed image", post.imageThumbnailUri || post.imageUri)}
+            />
           </Pressable>
         )}
 
@@ -371,11 +448,28 @@ export function PostCard({
           </Text>
         </Pressable>
 
-        {!post.anonymous && !isOwner && (
+        <View style={styles.statChip}>
+          <Text style={styles.statChipText}>👁 {post.engagement?.views ?? 0} views</Text>
+        </View>
+
+        {!isOwner && (
           <Pressable style={styles.commentButton} onPress={onMessagePost}>
             <Text style={styles.commentButtonText}>✉️ Message</Text>
           </Pressable>
         )}
+
+        <Pressable
+          style={[styles.commentButton, isSaved && styles.savedButton]}
+          onPress={() => onSavePost?.(post.id)}
+        >
+          <Text style={[styles.commentButtonText, isSaved && styles.savedButtonText]}>
+            {isSaved ? "✓ Saved" : `☆ Save ${post.engagement?.saves ?? 0}`}
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.commentButton} onPress={() => onSharePost?.(post)}>
+          <Text style={styles.commentButtonText}>↗ Share {post.engagement?.shares ?? 0}</Text>
+        </Pressable>
 
         {isOwner ? (
           <Pressable
@@ -422,7 +516,7 @@ export function PostCard({
             <View key={comment.id} style={styles.previewCommentCard}>
               <Pressable
                 onPress={() => openCommentAuthorProfile(comment)}
-                disabled={!comment.uid || comment.author === "Anonymous"}
+                disabled={!comment.uid}
               >
                 <Text style={styles.commentAuthor}>{comment.author}</Text>
               </Pressable>
@@ -473,7 +567,7 @@ export function PostCard({
             <Text style={{ color: "white", fontWeight: "900" }}>Close</Text>
           </Pressable>
 
-          {mediaOpen && post.imageUri && post.mediaType === "video" && (
+          {mediaOpen && videoUri && post.mediaType === "video" && (
             <View
               style={{
                 width: "100%",
@@ -481,14 +575,13 @@ export function PostCard({
                 justifyContent: "center",
               }}
             >
-              <PostVideo uri={post.imageUri} shouldPlay />
+              <PostVideo uri={videoUri} shouldPlay />
             </View>
           )}
 
           {mediaOpen &&
-            post.imageUri &&
             post.mediaType !== "video" &&
-            !post.imageUri.startsWith("blob:") && (
+            fullImageSource && (
               <ScrollView
                 style={{ width: "100%", height: "85%" }}
                 contentContainerStyle={{
@@ -500,16 +593,16 @@ export function PostCard({
                 minimumZoomScale={1}
                 centerContent
               >
-                {fullImageSource && (
-                  <Image
-                    source={fullImageSource}
-                    style={{
-                      width: 360,
-                      height: 650,
-                    }}
-                    resizeMode="contain"
-                  />
-                )}
+                <Image
+                  source={fullImageSource}
+                  style={{
+                    width: 360,
+                    height: 650,
+                  }}
+                  resizeMode="contain"
+                  onLoad={() => devLog("[media] loaded post full image", post.imageUri)}
+                  onError={() => devLog("[media] failed post full image", post.imageUri)}
+                />
               </ScrollView>
             )}
         </View>
@@ -517,3 +610,12 @@ export function PostCard({
     </View>
   );
 }
+
+export const PostCard = memo(
+  PostCardComponent,
+  (previousProps, nextProps) =>
+    previousProps.post === nextProps.post &&
+    previousProps.currentUserId === nextProps.currentUserId &&
+    previousProps.userCoordinates?.latitude === nextProps.userCoordinates?.latitude &&
+    previousProps.userCoordinates?.longitude === nextProps.userCoordinates?.longitude
+);

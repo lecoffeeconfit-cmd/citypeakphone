@@ -1,7 +1,12 @@
-import { supabase } from "../../supabase";
+import { countUsage } from "./usageAudit";
 
-const SUPABASE_STORAGE_MARKER = "/storage/v1/object/public/";
-const mediaPreviewUrlCache = new Map<string, string>();
+const SUPABASE_RENDER_MARKER = "/storage/v1/render/image/public/";
+const SUPABASE_OBJECT_MARKER = "/storage/v1/object/public/";
+
+type ImageSource = { uri: string };
+
+const normalizedUrlCache = new Map<string, string | null>();
+const imageSourceCache = new Map<string, ImageSource>();
 
 export function devLog(message: string, details?: unknown) {
   if (__DEV__) {
@@ -13,44 +18,120 @@ export function devLog(message: string, details?: unknown) {
   }
 }
 
-function getStorageObjectPath(publicUrl: string) {
-  const markerIndex = publicUrl.indexOf(SUPABASE_STORAGE_MARKER);
-
-  if (markerIndex === -1) return null;
-
-  const objectPath = publicUrl.slice(markerIndex + SUPABASE_STORAGE_MARKER.length);
-  const [, ...pathParts] = objectPath.split("?")[0].split("/");
-
-  if (pathParts.length === 0) return null;
-
-  return decodeURIComponent(pathParts.join("/"));
+function stripQueryAndHash(url: string) {
+  return url.split("#")[0].split("?")[0];
 }
 
-export function getFeedImagePreviewUrl(uri?: string) {
-  if (!uri || uri.startsWith("blob:")) return uri;
+function normalizeSupabaseRenderUrl(url: string) {
+  const markerIndex = url.indexOf(SUPABASE_RENDER_MARKER);
 
-  const cachedUrl = mediaPreviewUrlCache.get(uri);
+  if (markerIndex === -1) return url;
 
-  if (cachedUrl) return cachedUrl;
+  const prefix = url.slice(0, markerIndex);
+  const objectPath = stripQueryAndHash(
+    url.slice(markerIndex + SUPABASE_RENDER_MARKER.length)
+  );
 
-  const storagePath = getStorageObjectPath(uri);
+  if (!objectPath) return null;
 
-  if (!storagePath) {
-    mediaPreviewUrlCache.set(uri, uri);
-    return uri;
+  const normalizedUrl = `${prefix}${SUPABASE_OBJECT_MARKER}${objectPath}`;
+
+  devLog("[media] normalized Supabase render URL to public object URL", {
+    from: url,
+    to: normalizedUrl,
+  });
+  countUsage("image-url-normalized-from-render");
+
+  return normalizedUrl;
+}
+
+export function normalizeMediaUri(uri?: string | null) {
+  if (typeof uri !== "string") return null;
+
+  const trimmedUri = uri.trim();
+
+  if (!trimmedUri || trimmedUri === "undefined" || trimmedUri === "null") {
+    devLog("[media] skipped empty media URI", uri);
+    countUsage("image-url-skipped-empty");
+    return null;
   }
 
-  const { data } = supabase.storage.from("images").getPublicUrl(storagePath, {
-    transform: {
-      width: 720,
-      height: 720,
-      resize: "contain",
-      quality: 70,
-    },
-  });
+  const cachedUri = normalizedUrlCache.get(trimmedUri);
 
-  mediaPreviewUrlCache.set(uri, data.publicUrl);
-  devLog("[media] generated cached feed preview URL", storagePath);
+  if (cachedUri !== undefined) return cachedUri;
 
-  return data.publicUrl;
+  if (trimmedUri.startsWith("blob:")) {
+    normalizedUrlCache.set(trimmedUri, null);
+    devLog("[media] skipped blob media URI", trimmedUri);
+    countUsage("image-url-skipped-blob");
+    return null;
+  }
+
+  const normalizedSupabaseUrl = normalizeSupabaseRenderUrl(trimmedUri);
+
+  if (!normalizedSupabaseUrl) {
+    normalizedUrlCache.set(trimmedUri, null);
+    devLog("[media] skipped invalid Supabase render media URI", trimmedUri);
+    countUsage("image-url-skipped-invalid-render");
+    return null;
+  }
+
+  const isLocalUri =
+    normalizedSupabaseUrl.startsWith("file:") ||
+    normalizedSupabaseUrl.startsWith("content:") ||
+    normalizedSupabaseUrl.startsWith("data:image/");
+
+  if (isLocalUri) {
+    normalizedUrlCache.set(trimmedUri, normalizedSupabaseUrl);
+    return normalizedSupabaseUrl;
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedSupabaseUrl);
+    const validProtocol = parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
+
+    if (!validProtocol || !parsedUrl.hostname || parsedUrl.pathname.endsWith("/")) {
+      normalizedUrlCache.set(trimmedUri, null);
+      devLog("[media] skipped malformed remote media URI", normalizedSupabaseUrl);
+      countUsage("image-url-skipped-malformed");
+      return null;
+    }
+
+    const safeUrl = parsedUrl.toString();
+
+    normalizedUrlCache.set(trimmedUri, safeUrl);
+
+    if (safeUrl !== trimmedUri) {
+      normalizedUrlCache.set(safeUrl, safeUrl);
+    }
+
+    return safeUrl;
+  } catch {
+    normalizedUrlCache.set(trimmedUri, null);
+    devLog("[media] skipped unparsable media URI", trimmedUri);
+    countUsage("image-url-skipped-unparsable");
+    return null;
+  }
+}
+
+export function getStableImageSource(uri?: string | null, context = "image") {
+  const normalizedUri = normalizeMediaUri(uri);
+
+  if (!normalizedUri) {
+    devLog(`[media] skipped invalid ${context}`, uri);
+    countUsage(`image-skipped:${context}`);
+    return undefined;
+  }
+
+  const cachedSource = imageSourceCache.get(normalizedUri);
+
+  if (cachedSource) return cachedSource;
+
+  const source = { uri: normalizedUri };
+
+  imageSourceCache.set(normalizedUri, source);
+  devLog(`[media] using stable ${context}`, normalizedUri);
+  countUsage(`image-source-created:${context}`);
+
+  return source;
 }

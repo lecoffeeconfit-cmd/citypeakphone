@@ -32,6 +32,12 @@
     "plugins": [
       "expo-video",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow CityPeak to show how close local posts are to you."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#0F172A",

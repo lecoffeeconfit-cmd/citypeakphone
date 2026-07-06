@@ -7,6 +7,7 @@ export type Tab =
   | "admin";
 export type ReactionKey = "fire" | "heart" | "laugh" | "wow" | "dislike";
 export type PostCategory =
+  | "Alerts"
   | "Educational"
   | "Entertainment"
   | "Technology"
@@ -15,9 +16,16 @@ export type PostCategory =
   | "Sales & Marketing"
   | "Random Thoughts"
   | "Places"
-  | "Food";
+  | "Food"
+  | "Health & Wellness"
+  | "Personal Finance"
+  | "Relationships"
+  | "Careers & Jobs"
+  | "Sports"
+  | "Events";
 
 export const postCategories: PostCategory[] = [
+  "Alerts",
   "Educational",
   "Entertainment",
   "Technology",
@@ -27,10 +35,42 @@ export const postCategories: PostCategory[] = [
   "Random Thoughts",
   "Places",
   "Food",
+  "Health & Wellness",
+  "Personal Finance",
+  "Relationships",
+  "Careers & Jobs",
+  "Sports",
+  "Events",
 ];
 
 export type MediaType = "image" | "video";
 export type MediaKind = "post" | "tutorial";
+export type PostType =
+  | "standard"
+  | "sale"
+  | "poll"
+  | "announcement"
+  | "question"
+  | "recommendation"
+  | "hiddenGem"
+  | "foodReview"
+  | "alert"
+  | "event"
+  | "job"
+  | "volunteer";
+
+export type PostFields = Record<string, string>;
+
+export type Coordinates = {
+  latitude: number;
+  longitude: number;
+};
+
+export type EngagementStats = {
+  views: number;
+  saves: number;
+  shares: number;
+};
 
 export type PollOption = {
   id: string;
@@ -75,13 +115,21 @@ export type Post = {
   id: string;
   uid?: string;
 username?: string;
-photoUrl?: string;
+  photoUrl?: string;
   author: string;
-  anonymous: boolean;
+  postType?: PostType;
+  saleTitle?: string;
+  salePrice?: string;
+  saleCondition?: string;
+  postFields?: PostFields;
   text: string;
+  tags?: string[];
   category?: PostCategory;
   location: string;
+  postCoordinates?: Coordinates | null;
+  expiresAt?: string | null;
   imageUri?: string;
+  imageThumbnailUri?: string;
   mediaType?: MediaType;
   mediaKind?: MediaKind;
   mediaDurationMs?: number;
@@ -90,6 +138,9 @@ photoUrl?: string;
   createdAt?: any;
   reactions: Record<ReactionKey, number>;
   reactedBy?: Record<string, ReactionKey>;
+  engagement?: EngagementStats;
+  viewedBy?: Record<string, boolean>;
+  savedBy?: Record<string, boolean>;
   comments: Comment[];
 };
 

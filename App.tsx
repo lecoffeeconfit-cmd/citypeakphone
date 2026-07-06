@@ -1,7 +1,8 @@
 import "./global.css";
-import { Platform } from "react-native";
+import { Platform, Share } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as Location from "expo-location";
 import { decode } from "base64-arraybuffer";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -19,9 +20,11 @@ import {
   arrayUnion,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
+  increment,
   onSnapshot,
   orderBy,
   query,
@@ -51,11 +54,15 @@ import type {
   MediaKind,
   Post,
   PostCategory,
+  PostFields,
+  PostType,
   PollDraft,
   ReactionKey,
   Tab,
+  Coordinates,
 } from "./src/types";
-import { devLog, getFeedImagePreviewUrl } from "./src/utils/media";
+import { devLog, getStableImageSource, normalizeMediaUri } from "./src/utils/media";
+import { countUsage } from "./src/utils/usageAudit";
 
 type PublicUserProfile = {
   uid: string;
@@ -70,6 +77,9 @@ type PublicUserProfile = {
     polls: number;
     pollVotes: number;
     areas: number;
+    views: number;
+    saves: number;
+    shares: number;
   };
 };
 
@@ -114,6 +124,14 @@ function getPostStats(userPosts: Post[]) {
       .map((post) => post.location)
       .filter((location): location is string => !!location)
   );
+  const engagement = userPosts.reduce(
+    (totals, post) => ({
+      views: totals.views + (post.engagement?.views ?? 0),
+      saves: totals.saves + (post.engagement?.saves ?? 0),
+      shares: totals.shares + (post.engagement?.shares ?? 0),
+    }),
+    { views: 0, saves: 0, shares: 0 }
+  );
 
   return {
     posts: userPosts.length,
@@ -122,6 +140,7 @@ function getPostStats(userPosts: Post[]) {
     polls: pollPosts.length,
     pollVotes,
     areas: areas.size,
+    ...engagement,
   };
 }
 
@@ -133,6 +152,9 @@ function emptyStats() {
     polls: 0,
     pollVotes: 0,
     areas: 0,
+    views: 0,
+    saves: 0,
+    shares: 0,
   };
 }
 
@@ -149,7 +171,7 @@ function PublicUserProfileModal({
 }) {
   if (!profile) return null;
 
-  const displayPhoto = getFeedImagePreviewUrl(profile.photoUrl);
+  const displayPhotoSource = getStableImageSource(profile.photoUrl, "public profile photo");
   const isSelf = currentUserId === profile.uid;
 
   return (
@@ -165,8 +187,12 @@ function PublicUserProfileModal({
 
           <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
             <View style={styles.profileCard}>
-              {displayPhoto ? (
-                <Image source={{ uri: displayPhoto }} style={styles.profilePhoto} />
+              {displayPhotoSource ? (
+                <Image
+                  source={displayPhotoSource}
+                  style={styles.profilePhoto}
+                  onError={() => devLog("[media] public profile photo failed", profile.photoUrl)}
+                />
               ) : (
                 <View style={styles.profileAvatar}>
                   <Text style={styles.profileAvatarText}>
@@ -239,6 +265,31 @@ function PublicUserProfileModal({
                   <Text style={styles.statLabel}>Poll Votes</Text>
                 </View>
               </View>
+
+              <View style={styles.analyticsCard}>
+                <Text style={styles.analyticsKicker}>Engagement</Text>
+                <Text style={styles.analyticsTitle}>Post analytics</Text>
+
+                <View style={styles.analyticsGrid}>
+                  <View style={styles.analyticsMetric}>
+                    <Text style={styles.analyticsIcon}>👁</Text>
+                    <Text style={styles.analyticsValue}>{profile.stats.views}</Text>
+                    <Text style={styles.analyticsLabel}>Views</Text>
+                  </View>
+
+                  <View style={styles.analyticsMetric}>
+                    <Text style={styles.analyticsIcon}>☆</Text>
+                    <Text style={styles.analyticsValue}>{profile.stats.saves}</Text>
+                    <Text style={styles.analyticsLabel}>Saves</Text>
+                  </View>
+
+                  <View style={styles.analyticsMetric}>
+                    <Text style={styles.analyticsIcon}>↗</Text>
+                    <Text style={styles.analyticsValue}>{profile.stats.shares}</Text>
+                    <Text style={styles.analyticsLabel}>Shares</Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
             {!isSelf && (
@@ -279,14 +330,23 @@ function AdminLoadedVideo({ uri }: { uri: string }) {
 
 function AdminVideoPreview({ uri }: { uri: string }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const videoUri = normalizeMediaUri(uri);
+
+  if (!videoUri) {
+    devLog("[media] skipped invalid report video", uri);
+    return null;
+  }
 
   if (isLoaded) {
-    return <AdminLoadedVideo uri={uri} />;
+    return <AdminLoadedVideo uri={videoUri} />;
   }
 
   return (
     <Pressable
-      onPress={() => setIsLoaded(true)}
+      onPress={() => {
+        countUsage("video-load:admin-report");
+        setIsLoaded(true);
+      }}
       style={{
         width: "100%",
         height: 220,
@@ -322,15 +382,23 @@ export default function App() {
   const [reports, setReports] = useState<any[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [profilePosts, setProfilePosts] = useState<Post[]>([]);
+  const [userCoordinates, setUserCoordinates] = useState<Coordinates | null>(null);
   const [feedLimit, setFeedLimit] = useState(25);
   const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [feedRefreshNonce, setFeedRefreshNonce] = useState(0);
+  const [feedRefreshing, setFeedRefreshing] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [startingMessageUserId, setStartingMessageUserId] = useState<string | null>(null);
   const postingStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedLoadingMoreRef = useRef(false);
+  const publicProfileCacheRef = useRef(
+    new Map<string, { profile: PublicUserProfile; loadedAt: number }>()
+  );
 
   useEffect(() => {
+    countUsage("listener-create:auth");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      countUsage("auth-snapshot");
       setCurrentUser(user);
       setFirebaseReady(true);
 
@@ -359,12 +427,65 @@ export default function App() {
       }
     });
 
-    return unsubscribe;
+    return () => {
+      countUsage("listener-cleanup:auth");
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
 
+    let canceled = false;
+
+    async function loadUserCoordinates() {
+      const coordinates = await getCurrentCoordinates();
+
+      if (!canceled) {
+        setUserCoordinates(coordinates);
+      }
+    }
+
+    loadUserCoordinates();
+
+    return () => {
+      canceled = true;
+    };
+  }, [currentUser?.uid]);
+
+  async function getCurrentCoordinates(): Promise<Coordinates | null> {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+
+      if (permission.status !== "granted") {
+        return null;
+      }
+
+      const lastKnownPosition = await Location.getLastKnownPositionAsync({
+        maxAge: 5 * 60 * 1000,
+        requiredAccuracy: 250,
+      });
+      const position =
+        lastKnownPosition ||
+        (await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }));
+
+      return {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      };
+    } catch (error) {
+      devLog("[location] unable to load coordinates", error);
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    if (!["feed", "search", "profile"].includes(tab)) return;
+
+    countUsage("listener-create:feed-posts", { feedLimit, feedRefreshNonce });
     const q = query(
       collection(db, "posts"),
       orderBy("createdAt", "desc"),
@@ -372,6 +493,10 @@ export default function App() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      countUsage("feed-snapshot", {
+        requestedLimit: feedLimit,
+        snapshotSize: snapshot.size,
+      });
       devLog("[feed] posts snapshot received", {
         requestedLimit: feedLimit,
         snapshotSize: snapshot.size,
@@ -385,14 +510,20 @@ export default function App() {
 
       setHasMorePosts(firebasePosts.length > feedLimit);
       setPosts(firebasePosts.slice(0, feedLimit));
+      setFeedRefreshing(false);
     });
 
-    return unsubscribe;
-  }, [currentUser?.uid, feedLimit]);
+    return () => {
+      countUsage("listener-cleanup:feed-posts", { feedLimit, feedRefreshNonce });
+      unsubscribe();
+    };
+  }, [currentUser?.uid, feedLimit, feedRefreshNonce, tab]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
+    if (tab !== "profile") return;
 
+    countUsage("listener-create:profile-posts");
     const q = query(
       collection(db, "posts"),
       where("uid", "==", currentUser.uid),
@@ -400,6 +531,7 @@ export default function App() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      countUsage("profile-posts-snapshot", snapshot.size);
       const loadedPosts: Post[] = snapshot.docs.map((snapDoc) => ({
         id: snapDoc.id,
         ...(snapDoc.data() as Omit<Post, "id">),
@@ -408,8 +540,11 @@ export default function App() {
       setProfilePosts(loadedPosts);
     });
 
-    return unsubscribe;
-  }, [currentUser?.uid]);
+    return () => {
+      countUsage("listener-cleanup:profile-posts");
+      unsubscribe();
+    };
+  }, [currentUser?.uid, tab]);
 
   useEffect(() => {
     if (!selectedPost) return;
@@ -433,12 +568,14 @@ export default function App() {
   useEffect(() => {
     if (!currentUser?.uid) return;
 
+    countUsage("listener-create:unread-messages");
     const q = query(
       collection(db, "messages"),
       where("participants", "array-contains", currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      countUsage("unread-messages-snapshot", snapshot.size);
       const unreadCount = snapshot.docs.filter((messageDoc) => {
         const data = messageDoc.data();
 
@@ -451,13 +588,18 @@ export default function App() {
       setUnreadMessagesCount(unreadCount);
     });
 
-    return unsubscribe;
+    return () => {
+      countUsage("listener-cleanup:unread-messages");
+      unsubscribe();
+    };
   }, [currentUser?.uid]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
     if (!isAdmin) return;
+    if (tab !== ("admin" as Tab)) return;
 
+    countUsage("listener-create:admin-reports");
     devLog("[admin] starting reports listener", currentUser.uid);
 
     const q = query(
@@ -469,6 +611,7 @@ export default function App() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
+        countUsage("admin-reports-snapshot", snapshot.size);
         devLog("[admin] report snapshot received", snapshot.size);
 
         const loadedReports = snapshot.docs.map((reportDoc) => ({
@@ -485,8 +628,11 @@ export default function App() {
       }
     );
 
-    return unsubscribe;
-  }, [currentUser?.uid, isAdmin]);
+    return () => {
+      countUsage("listener-cleanup:admin-reports");
+      unsubscribe();
+    };
+  }, [currentUser?.uid, isAdmin, tab]);
 
   async function prepareImageForUpload(uri: string) {
     const result = await ImageManipulator.manipulateAsync(
@@ -510,6 +656,7 @@ export default function App() {
 
   async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
   try {
+    countUsage("storage-upload-start", mediaType || "unknown");
     const extension = mediaType === "video" ? "mp4" : "jpg";
     const fileName = `${Date.now()}.${extension}`;
     const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
@@ -544,13 +691,21 @@ export default function App() {
     const { data: publicUrlData } = supabase.storage
       .from("images")
       .getPublicUrl(fileName);
+    countUsage("storage-public-url-created", fileName);
 
     devLog("[media] uploaded media to Supabase", {
       mediaType,
       fileName,
     });
 
-    return publicUrlData.publicUrl;
+    const publicUrl = normalizeMediaUri(publicUrlData.publicUrl);
+
+    if (!publicUrl) {
+      devLog("[media] Supabase returned invalid public URL", publicUrlData.publicUrl);
+      return null;
+    }
+
+    return publicUrl;
   } catch (error: any) {
     devLog("[media] upload media error", error);
     alert(error.message || "Media upload failed.");
@@ -570,15 +725,23 @@ export default function App() {
     });
   }
 
+  function refreshFeedPosts() {
+    if (feedRefreshing) return;
+
+    countUsage("manual-feed-refresh");
+    setFeedRefreshing(true);
+    setFeedRefreshNonce((nonce) => nonce + 1);
+  }
+
   const reportImagePreviewSources = useMemo(() => {
     const sources = new Map<string, { uri: string }>();
 
     reports.forEach((report) => {
       if (report.imageUri && report.mediaType !== "video") {
-        const previewUri = getFeedImagePreviewUrl(report.imageUri);
+        const previewSource = getStableImageSource(report.imageUri, "report image");
 
-        if (previewUri) {
-          sources.set(report.id, { uri: previewUri });
+        if (previewSource) {
+          sources.set(report.id, previewSource);
         }
       }
     });
@@ -628,14 +791,20 @@ export default function App() {
 
   async function addPost(
     text: string,
-    anonymous: boolean,
     mediaUri?: string,
     mediaType?: MediaType,
     category?: PostCategory,
     poll?: PollDraft,
     mediaKind?: MediaKind,
     mediaDurationMs?: number,
-    mediaSizeBytes?: number
+    mediaSizeBytes?: number,
+    postType: PostType = "standard",
+    saleTitle?: string,
+    salePrice?: string,
+    saleCondition?: string,
+    expiresAt?: string,
+    tags?: string[],
+    postFields?: PostFields
   ) {
     if (!currentUser) return;
 
@@ -692,15 +861,29 @@ export default function App() {
   uploadedMediaUrl = result;
 }
 
+      const postCoordinates = userCoordinates || (await getCurrentCoordinates());
+
+      if (postCoordinates) {
+        setUserCoordinates(postCoordinates);
+      }
+
       await addDoc(collection(db, "posts"), {
         uid: currentUser.uid,
         username,
-        photoUrl: anonymous ? "" : photoUrl,
-        author: anonymous ? "Anonymous" : `@${username}`,
-        anonymous,
+        photoUrl,
+        author: `@${username}`,
+        postType,
+        saleTitle: saleTitle || "",
+        salePrice: salePrice || "",
+        saleCondition: saleCondition || "",
+        postFields: postFields || {},
         text,
+        tags: tags || [],
         location: selectedArea,
+        postCoordinates,
+        expiresAt: expiresAt || null,
         imageUri: uploadedMediaUrl,
+        imageThumbnailUri: mediaType === "image" ? uploadedMediaUrl : "",
         mediaType: mediaType || "",
         mediaKind: mediaKind || "post",
         mediaDurationMs: mediaDurationMs || null,
@@ -718,6 +901,9 @@ export default function App() {
           : null,
         reactions: { fire: 0, heart: 0, laugh: 0, wow: 0, dislike: 0 },
         reactedBy: {},
+        engagement: { views: 0, saves: 0, shares: 0 },
+        viewedBy: {},
+        savedBy: {},
         comments: [],
         createdAt: serverTimestamp(),
       });
@@ -803,6 +989,80 @@ export default function App() {
       [`poll.votedBy.${currentUser.uid}`]: optionId,
     });
   }
+
+  async function openPostWithView(post: Post) {
+    setSelectedPost(post);
+
+    if (!currentUser?.uid || post.uid === currentUser.uid || post.viewedBy?.[currentUser.uid]) {
+      return;
+    }
+
+    await updateDoc(doc(db, "posts", post.id), {
+      "engagement.views": increment(1),
+      [`viewedBy.${currentUser.uid}`]: true,
+    });
+  }
+
+  async function savePost(postId: string) {
+    if (!currentUser?.uid) return;
+
+    const targetPost = posts.find((post) => post.id === postId);
+
+    if (!targetPost) return;
+
+    if (targetPost.savedBy?.[currentUser.uid]) {
+      await updateDoc(doc(db, "posts", postId), {
+        "engagement.saves": increment(-1),
+        [`savedBy.${currentUser.uid}`]: deleteField(),
+      });
+
+      return;
+    }
+
+    await updateDoc(doc(db, "posts", postId), {
+      "engagement.saves": increment(1),
+      [`savedBy.${currentUser.uid}`]: true,
+    });
+  }
+
+  async function sharePost(post: Post) {
+    if (!currentUser?.uid) return;
+
+    const title = post.saleTitle || post.poll?.question || post.text || "CityPeak post";
+    const result = await Share.share({
+      message: `${title}\n\nPosted in ${post.location} on CityPeak.`,
+    });
+
+    if (result.action === Share.dismissedAction) return;
+
+    await updateDoc(doc(db, "posts", post.id), {
+      "engagement.shares": increment(1),
+    });
+  }
+
+  async function updatePostDetails(
+    postId: string,
+    updates: {
+      text: string;
+      tags: string[];
+      expiresAt?: string | null;
+      saleTitle?: string;
+      salePrice?: string;
+      saleCondition?: string;
+    }
+  ) {
+    const targetPost =
+      posts.find((post) => post.id === postId) ||
+      profilePosts.find((post) => post.id === postId);
+
+    if (!currentUser?.uid || targetPost?.uid !== currentUser.uid) {
+      alert("You can only edit your own posts.");
+      return;
+    }
+
+    await updateDoc(doc(db, "posts", postId), updates);
+  }
+
   async function deletePost(postId: string) {
     try {
       alert("Delete button clicked");
@@ -930,14 +1190,14 @@ export default function App() {
 
 
 
-  async function addComment(postId: string, text: string, anonymous: boolean) {
+  async function addComment(postId: string, text: string) {
     if (!currentUser) return;
 
     const newComment: Comment = {
       id: Date.now().toString(),
       uid: currentUser.uid,
       username,
-      author: anonymous ? "Anonymous" : `@${username}`,
+      author: `@${username}`,
       text,
       likes: 0,
       dislikes: 0,
@@ -1077,8 +1337,7 @@ export default function App() {
   async function addReply(
     postId: string,
     commentId: string,
-    text: string,
-    anonymous: boolean
+    text: string
   ) {
     if (!currentUser) return;
 
@@ -1089,7 +1348,7 @@ export default function App() {
       id: Date.now().toString(),
       uid: currentUser.uid,
       username,
-      author: anonymous ? "Anonymous" : `@${username}`,
+      author: `@${username}`,
       text,
       likes: 0,
       dislikes: 0,
@@ -1113,11 +1372,6 @@ export default function App() {
   function startMessageFromPost(post: Post) {
     if (!post.uid) {
       alert("This user cannot be messaged.");
-      return;
-    }
-
-    if (post.anonymous) {
-      alert("Anonymous posts cannot be messaged.");
       return;
     }
 
@@ -1159,8 +1413,24 @@ export default function App() {
     return getPostStats(profilePosts);
   }, [profilePosts]);
 
+  const savedPosts = useMemo(() => {
+    if (!currentUser?.uid) return [];
+
+    return posts.filter((post) => !!post.savedBy?.[currentUser.uid]);
+  }, [posts, currentUser?.uid]);
+
   async function openUserProfile(target: UserProfileTarget) {
     if (!target.uid) return;
+
+    const cachedProfile = publicProfileCacheRef.current.get(target.uid);
+    const cacheIsFresh =
+      cachedProfile && Date.now() - cachedProfile.loadedAt < 5 * 60 * 1000;
+
+    if (cacheIsFresh) {
+      countUsage("profile-cache-hit", target.uid);
+      setSelectedUserProfile(cachedProfile.profile);
+      return;
+    }
 
     const fallbackUsername =
       target.username ||
@@ -1175,6 +1445,7 @@ export default function App() {
     });
 
     try {
+      countUsage("profile-fetch", target.uid);
       const [userDoc, userPostsSnapshot] = await Promise.all([
         getDoc(doc(db, "users", target.uid)),
         getDocs(
@@ -1191,7 +1462,7 @@ export default function App() {
         ...(snapDoc.data() as Omit<Post, "id">),
       }));
 
-      setSelectedUserProfile({
+      const loadedProfile = {
         uid: target.uid,
         username:
           userData.username ||
@@ -1200,7 +1471,13 @@ export default function App() {
         bio: userData.bio || "",
         photoUrl: userData.photoUrl || target.photoUrl || "",
         stats: getPostStats(loadedPosts),
+      };
+
+      publicProfileCacheRef.current.set(target.uid, {
+        profile: loadedProfile,
+        loadedAt: Date.now(),
       });
+      setSelectedUserProfile(loadedProfile);
     } catch (error) {
       devLog("[profile] failed to load public user profile", error);
     }
@@ -1240,7 +1517,7 @@ export default function App() {
       <View style={styles.header}>
         <View style={styles.headerTitleArea}>
           <Text style={styles.logo}>CityPeak</Text>
-          <Text style={styles.subtitle}>Local anonymous city feeds</Text>
+          <Text style={styles.subtitle}>Local city feeds</Text>
 
           <Text style={styles.signedInText}>
             Signed in as @{username}
@@ -1300,15 +1577,20 @@ export default function App() {
           posts={posts}
           hasMorePosts={hasMorePosts}
           onLoadMorePosts={loadMoreFeedPosts}
+          onRefreshPosts={refreshFeedPosts}
+          refreshing={feedRefreshing}
           selectedArea={selectedArea}
           setTab={setTab}
           onReact={reactToPost}
-          onOpenPost={setSelectedPost}
+          onOpenPost={openPostWithView}
           currentUserId={currentUser.uid}
           onDeletePost={deletePost}
           onReportPost={reportPost}
           onMessagePost={startMessageFromPost}
           onVotePoll={voteOnPoll}
+          onSavePost={savePost}
+          onSharePost={sharePost}
+          userCoordinates={userCoordinates}
           onOpenUserProfile={openUserProfile}
         />
       )}
@@ -1370,16 +1652,20 @@ export default function App() {
               )}
 
               {report.imageUri && report.mediaType !== "video" && (
-                <Image
-                  source={reportImagePreviewSources.get(report.id) ?? { uri: report.imageUri }}
-                  style={{
-                    width: "100%",
-                    height: 220,
-                    borderRadius: 16,
-                    marginTop: 12,
-                    backgroundColor: "#0F172A",
-                  }}
-                />
+                reportImagePreviewSources.get(report.id) ? (
+                  <Image
+                    source={reportImagePreviewSources.get(report.id)}
+                    style={{
+                      width: "100%",
+                      height: 220,
+                      borderRadius: 16,
+                      marginTop: 12,
+                      backgroundColor: "#0F172A",
+                    }}
+                    onLoad={() => devLog("[media] loaded report image", report.imageUri)}
+                    onError={() => devLog("[media] failed report image", report.imageUri)}
+                  />
+                ) : null
               )}
 
 
@@ -1417,7 +1703,11 @@ export default function App() {
             photoUrl={photoUrl}
             email={currentUser.email}
             stats={profileStats}
+            posts={profilePosts}
+            savedPosts={savedPosts}
             onSaveProfile={saveProfile}
+            onUpdatePost={updatePostDetails}
+            onOpenPost={openPostWithView}
             onLogout={() => signOut(auth)}
             onDeleteAccount={deleteAccount}
           />
@@ -1445,6 +1735,7 @@ export default function App() {
         onDeleteComment={deleteComment}
         onDislikeComment={dislikeComment}
         onVotePoll={voteOnPoll}
+        userCoordinates={userCoordinates}
         onOpenUserProfile={openUserProfile}
       />
       <PublicUserProfileModal

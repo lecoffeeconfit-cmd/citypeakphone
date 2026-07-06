@@ -39,6 +39,171 @@ export const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  authScreen: {
+    flex: 1,
+    backgroundColor: "#0F172A",
+  },
+
+  authContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 28,
+  },
+
+  authHero: {
+    alignItems: "center",
+    marginBottom: 22,
+  },
+
+  authLogoMark: {
+    width: 148,
+    height: 148,
+    borderRadius: 42,
+    backgroundColor: "#0F172A",
+    borderWidth: 3,
+    borderColor: "#86B5CF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    overflow: "hidden",
+  },
+
+  authLogoImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  authLogo: {
+    color: "#FFFFFF",
+    fontSize: 38,
+    fontWeight: "900",
+  },
+
+  authSubtitle: {
+    color: "#86B5CF",
+    fontWeight: "800",
+    textAlign: "center",
+    lineHeight: 22,
+    marginTop: 8,
+    maxWidth: 320,
+  },
+
+  authCard: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 28,
+    padding: 18,
+  },
+
+  authModeSegment: {
+    flexDirection: "row",
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    padding: 5,
+    marginBottom: 18,
+  },
+
+  authModeButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  authModeButtonActive: {
+    backgroundColor: "#329BB8",
+  },
+
+  authModeText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+  },
+
+  authModeTextActive: {
+    color: "#0F172A",
+  },
+
+  authTitle: {
+    color: "#FFFFFF",
+    fontSize: 25,
+    fontWeight: "900",
+  },
+
+  authHelpText: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    lineHeight: 21,
+    marginTop: 6,
+    marginBottom: 16,
+  },
+
+  authFieldGroup: {
+    marginTop: 12,
+  },
+
+  authFieldLabel: {
+    color: "#86B5CF",
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    marginBottom: 7,
+  },
+
+  authInput: {
+    backgroundColor: "#0F172A",
+    color: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    fontWeight: "800",
+  },
+
+  authPrimaryButton: {
+    backgroundColor: "#329BB8",
+    borderRadius: 18,
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: "#86B5CF",
+  },
+
+  authPrimaryButtonText: {
+    color: "#0F172A",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  authInfoRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+  },
+
+  authInfoPill: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+
+  authInfoText: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
   headerActions: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -255,6 +420,98 @@ export const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  expirationCard: {
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#2A6F97",
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 14,
+    marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  expirationInput: {
+    width: 118,
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 14,
+    color: "#FFFFFF",
+    fontWeight: "900",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 12,
+  },
+
+  expirationBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#2A6F97",
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    marginBottom: 12,
+  },
+
+  expirationBadgeExpired: {
+    backgroundColor: "#450A0A",
+    borderColor: "#991B1B",
+  },
+
+  expirationBadgeText: {
+    color: "#BAE6FD",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  expirationBadgeTextExpired: {
+    color: "#FECACA",
+  },
+
+  tagComposerCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+
+  postTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginBottom: 12,
+  },
+
+  postTag: {
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    color: "#BAE6FD",
+    fontSize: 11,
+    fontWeight: "900",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  postApiMeta: {
+    marginTop: 7,
+    gap: 3,
+  },
+
+  postApiMetaText: {
+    color: "#CBD5E1",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
   more: {
     color: "#64748B",
     fontWeight: "900",
@@ -318,6 +575,20 @@ export const styles = StyleSheet.create({
   color: "#FFFFFF",
   fontWeight: "900",
 },
+
+  statChip: {
+    backgroundColor: "#132238",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  statChipText: {
+    color: "#BAE6FD",
+    fontWeight: "900",
+  },
 
   floatingButton: {
     position: "absolute",
@@ -413,6 +684,45 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 12,
     fontWeight: "800",
+  },
+
+  postTypeGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+    marginBottom: 16,
+  },
+
+  postTypeButton: {
+    flex: 1,
+    minHeight: 72,
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 10,
+  },
+
+  postTypeButtonActive: {
+    backgroundColor: "#329BB8",
+    borderColor: "#86B5CF",
+  },
+
+  postTypeEmoji: {
+    fontSize: 22,
+    marginBottom: 5,
+  },
+
+  postTypeText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+    fontSize: 13,
+  },
+
+  postTypeTextActive: {
+    color: "#FFFFFF",
   },
 
   mediaModeCard: {
@@ -627,6 +937,205 @@ statLabel: {
   marginTop: 3,
   fontWeight: "800",
 },
+
+  analyticsCard: {
+    width: "100%",
+    backgroundColor: "#0B1220",
+    borderWidth: 1,
+    borderColor: "#2A6F97",
+    borderRadius: 22,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  analyticsKicker: {
+    color: "#86B5CF",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  analyticsTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
+  analyticsGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+
+  analyticsMetric: {
+    flex: 1,
+    minHeight: 96,
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 16,
+    padding: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  analyticsIcon: {
+    color: "#86B5CF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  analyticsValue: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  analyticsLabel: {
+    color: "#CBD5E1",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  savedButton: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#86EFAC",
+  },
+
+  savedButtonText: {
+    color: "#14532D",
+  },
+
+  profileViewTabs: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 20,
+    padding: 6,
+    marginTop: 16,
+    flexDirection: "row",
+    gap: 6,
+  },
+
+  profileViewTab: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+
+  profileViewTabActive: {
+    backgroundColor: "#329BB8",
+  },
+
+  profileViewTabText: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  profileViewTabTextActive: {
+    color: "#FFFFFF",
+  },
+
+  profileContentPanel: {
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 14,
+  },
+
+  profileContentTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+
+  profileContentEmpty: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    lineHeight: 21,
+  },
+
+  profilePostCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 10,
+  },
+
+  profilePostHeader: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+  },
+
+  profilePostKicker: {
+    color: "#86B5CF",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  profilePostTitle: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
+    lineHeight: 21,
+    marginTop: 3,
+  },
+
+  profilePostActionButton: {
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#2A6F97",
+    borderRadius: 999,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
+  },
+
+  profilePostActionText: {
+    color: "#BAE6FD",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
+  profilePostMeta: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 10,
+  },
+
+  profilePostTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+
+  profilePostTag: {
+    backgroundColor: "#132238",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 999,
+    color: "#BAE6FD",
+    fontSize: 11,
+    fontWeight: "900",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
 
   accountActionCard: {
     backgroundColor: "#1E293B",
@@ -1120,6 +1629,73 @@ marginBottom: 12,
     borderRadius: 22,
     padding: 14,
     marginBottom: 15,
+  },
+
+  saleCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 22,
+    padding: 14,
+    marginBottom: 15,
+  },
+
+  saleKicker: {
+    color: "#F8B400",
+    fontWeight: "900",
+    fontSize: 12,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+
+  saleTitle: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 19,
+    lineHeight: 25,
+  },
+
+  salePrice: {
+    color: "#86B5CF",
+    fontWeight: "900",
+    fontSize: 24,
+    marginTop: 6,
+  },
+
+  saleMeta: {
+    color: "#CBD5E1",
+    fontWeight: "800",
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+
+  postFieldsCard: {
+    backgroundColor: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#334155",
+    borderRadius: 18,
+    padding: 13,
+    marginBottom: 15,
+    gap: 10,
+  },
+
+  postFieldRow: {
+    gap: 3,
+  },
+
+  postFieldLabel: {
+    color: "#86B5CF",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  postFieldValue: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 20,
   },
 
   pollHeaderRow: {

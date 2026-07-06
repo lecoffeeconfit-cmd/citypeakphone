@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
 import { postCategories } from "../types";
-import type { Post, PostCategory, ReactionKey, Tab } from "../types";
+import type { Coordinates, Post, PostCategory, ReactionKey, Tab } from "../types";
 
 type FeedMode = "latest" | "trending";
 type CategoryFilter = "All" | PostCategory;
@@ -11,6 +11,8 @@ type FeedScreenProps = {
   posts: Post[];
   hasMorePosts: boolean;
   onLoadMorePosts: () => void;
+  onRefreshPosts: () => void;
+  refreshing: boolean;
   selectedArea: string;
   setTab: (tab: Tab) => void;
   onReact: (postId: string, reaction: ReactionKey) => void;
@@ -20,6 +22,9 @@ type FeedScreenProps = {
   onReportPost: (postId: string, reason: string) => void;
   onMessagePost: (post: Post) => void;
   onVotePoll: (postId: string, optionId: string) => void;
+  onSavePost: (postId: string) => void;
+  onSharePost: (post: Post) => void;
+  userCoordinates?: Coordinates | null;
   onOpenUserProfile: (target: {
     uid?: string;
     username?: string;
@@ -32,6 +37,7 @@ const categoryFilters: CategoryFilter[] = ["All", ...postCategories];
 
 const categoryColors: Record<string, string> = {
   All: "#86B5CF",
+  Alerts: "#F58A00",
   Educational: "#329BB8",
   Entertainment: "#003B57",
   Technology: "#F8B400",
@@ -41,6 +47,12 @@ const categoryColors: Record<string, string> = {
   "Random Thoughts": "#003B57",
   Places: "#F8B400",
   Food: "#F58A00",
+  "Health & Wellness": "#86B5CF",
+  "Personal Finance": "#329BB8",
+  Relationships: "#003B57",
+  "Careers & Jobs": "#F8B400",
+  Sports: "#F58A00",
+  Events: "#86B5CF",
 };
 
 function getTrendingScore(post: Post) {
@@ -61,6 +73,7 @@ function getTrendingScore(post: Post) {
 
 function getCategoryEmoji(category: CategoryFilter) {
   if (category === "All") return "🌎";
+  if (category === "Alerts") return "🚨";
   if (category === "Educational") return "📘";
   if (category === "Entertainment") return "🎬";
   if (category === "Technology") return "💻";
@@ -69,6 +82,12 @@ function getCategoryEmoji(category: CategoryFilter) {
   if (category === "Sales & Marketing") return "📣";
   if (category === "Random Thoughts") return "💭";
   if (category === "Food") return "🍔";
+  if (category === "Health & Wellness") return "🧘";
+  if (category === "Personal Finance") return "💵";
+  if (category === "Relationships") return "💬";
+  if (category === "Careers & Jobs") return "💼";
+  if (category === "Sports") return "🏀";
+  if (category === "Events") return "📈";
   return "📍";
 }
 
@@ -76,6 +95,8 @@ export function FeedScreen({
   posts,
   hasMorePosts,
   onLoadMorePosts,
+  onRefreshPosts,
+  refreshing,
   selectedArea,
   setTab,
   onReact,
@@ -85,6 +106,9 @@ export function FeedScreen({
   onReportPost,
   onMessagePost,
   onVotePoll,
+  onSavePost,
+  onSharePost,
+  userCoordinates,
   onOpenUserProfile,
 }: FeedScreenProps) {
   const [feedMode, setFeedMode] = useState<FeedMode>("latest");
@@ -106,11 +130,13 @@ export function FeedScreen({
         const text = post.text?.toLowerCase() || "";
         const author = post.author?.toLowerCase() || "";
         const category = post.category?.toLowerCase() || "";
+        const tags = post.tags?.join(" ").toLowerCase() || "";
 
         return (
           text.includes(cleanedSearch) ||
           author.includes(cleanedSearch) ||
-          category.includes(cleanedSearch)
+          category.includes(cleanedSearch) ||
+          tags.includes(cleanedSearch)
         );
       });
     }
@@ -128,6 +154,9 @@ export function FeedScreen({
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.feedList}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefreshPosts} />
+        }
         onEndReached={() => {
           if (hasMorePosts) {
             onLoadMorePosts();
@@ -341,6 +370,9 @@ export function FeedScreen({
             onReportPost={onReportPost}
             onMessagePost={() => onMessagePost(item)}
             onVotePoll={onVotePoll}
+            onSavePost={onSavePost}
+            onSharePost={onSharePost}
+            userCoordinates={userCoordinates}
             onOpenUserProfile={onOpenUserProfile}
           />
         )}
