@@ -88,14 +88,20 @@ function PostCardComponent({
   const feedImageSource = useMemo(
     () =>
       getStableImageSource(
-        post.imageThumbnailUri || post.imageUri,
+        post.mediaType === "video"
+          ? post.imageThumbnailUri
+          : post.imageThumbnailUri || post.imageUri,
         `post ${post.id} feed image`
       ),
-    [post.imageThumbnailUri, post.imageUri, post.id]
+    [post.imageThumbnailUri, post.imageUri, post.mediaType, post.id]
   );
   const fullImageSource = useMemo(
-    () => getStableImageSource(post.imageUri, `post ${post.id} full image`),
-    [post.imageUri, post.id]
+    () =>
+      getStableImageSource(
+        post.mediaType === "video" ? undefined : post.imageUri,
+        `post ${post.id} full image`
+      ),
+    [post.imageUri, post.mediaType, post.id]
   );
   const videoUri = useMemo(
     () => normalizeMediaUri(post.mediaType === "video" ? post.imageUri : undefined),
@@ -193,9 +199,9 @@ function PostCardComponent({
             width: 58,
             height: 58,
             borderRadius: 29,
-            backgroundColor: "#0F172A",
+            backgroundColor: "rgba(15, 23, 42, 0.30)",
             borderWidth: 1,
-            borderColor: "#334155",
+            borderColor: "rgba(148, 163, 184, 0.28)",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
@@ -269,9 +275,9 @@ function PostCardComponent({
         <View
           style={{
             alignSelf: "flex-start",
-            backgroundColor: "#0F172A",
+            backgroundColor: "rgba(15, 23, 42, 0.30)",
             borderWidth: 1,
-            borderColor: "#334155",
+            borderColor: "rgba(148, 163, 184, 0.24)",
             paddingVertical: 7,
             paddingHorizontal: 11,
             borderRadius: 999,
@@ -345,11 +351,40 @@ function PostCardComponent({
               borderColor: "#334155",
               marginBottom: 15,
               position: "relative",
-              backgroundColor: "#0F172A",
+              backgroundColor: "rgba(15, 23, 42, 0.30)",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
+            {feedImageSource && (
+              <Image
+                source={feedImageSource}
+                style={{
+                  position: "absolute",
+                  width: "100%",
+                  height: "100%",
+                }}
+                resizeMode="cover"
+                onLoad={() =>
+                  devLog("[media] loaded post video thumbnail", post.imageThumbnailUri)
+                }
+                onError={() =>
+                  devLog("[media] failed post video thumbnail", post.imageThumbnailUri)
+                }
+              />
+            )}
+            {feedImageSource && (
+              <View
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(0,0,0,0.28)",
+                }}
+              />
+            )}
             <Text style={{ color: "white", fontSize: 42, fontWeight: "900" }}>
               ▶
             </Text>
@@ -556,12 +591,12 @@ function PostCardComponent({
               top: 50,
               right: 22,
               zIndex: 10,
-              backgroundColor: "#1E293B",
+              backgroundColor: "rgba(30, 41, 59, 0.42)",
               paddingVertical: 10,
               paddingHorizontal: 14,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "#334155",
+              borderColor: "rgba(148, 163, 184, 0.28)",
             }}
           >
             <Text style={{ color: "white", fontWeight: "900" }}>Close</Text>

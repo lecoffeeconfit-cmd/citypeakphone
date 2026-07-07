@@ -1,11 +1,22 @@
 import React, { useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { CityBackdrop } from "../components/CityBackdrop";
 import { styles } from "../styles";
 
 type AuthScreenProps = {
@@ -13,7 +24,7 @@ type AuthScreenProps = {
 };
 
 export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -37,6 +48,21 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
   email: email.trim().toLowerCase(),
   username: cleanedUsername,
   usernameLower: cleanedUsername.toLowerCase(),
+  followers: [],
+  following: [],
+  followerCount: 0,
+  followingCount: 0,
+  blockedUserIds: [],
+  hasCompletedOnboarding: false,
+  selectedArea: "Long Beach",
+  interests: [],
+  notificationsEnabled: false,
+  notificationPreferences: {
+    messages: true,
+    comments: true,
+    follows: true,
+    localAlerts: true,
+  },
   createdAt: serverTimestamp(),
 });
       } else {
@@ -53,6 +79,7 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
 
   return (
     <SafeAreaView style={styles.container}>
+      <CityBackdrop />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -62,46 +89,16 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
           contentContainerStyle={styles.authContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.authHero}>
-            <View style={styles.authLogoMark}>
-              <Image
-                source={require("../../assets/icon.png")}
-                style={styles.authLogoImage}
-                resizeMode="cover"
-              />
-            </View>
-            <Text style={styles.authLogo}>CityPeak</Text>
-            <Text style={styles.authSubtitle}>
-              Local city feeds, posts, events, deals, alerts, and conversations.
-            </Text>
-          </View>
-
           <View style={styles.authCard}>
-            <View style={styles.authModeSegment}>
-              {(["signup", "login"] as const).map((item) => {
-                const active = mode === item;
-
-                return (
-                  <Pressable
-                    key={item}
-                    style={[
-                      styles.authModeButton,
-                      active && styles.authModeButtonActive,
-                    ]}
-                    onPress={() => setMode(item)}
-                    disabled={loading}
-                  >
-                    <Text
-                      style={[
-                        styles.authModeText,
-                        active && styles.authModeTextActive,
-                      ]}
-                    >
-                      {item === "signup" ? "Create" : "Log in"}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+            <View style={styles.authHero}>
+              <View style={styles.authLogoMark}>
+                <Image
+                  source={require("../../assets/icon.png")}
+                  style={styles.authLogoImage}
+                  resizeMode="cover"
+                />
+              </View>
+              <Text style={styles.authLogo}>CityPeak</Text>
             </View>
 
             <Text style={styles.authTitle}>
@@ -109,7 +106,7 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
             </Text>
             <Text style={styles.authHelpText}>
               {mode === "signup"
-                ? "Pick a username and join the local conversation."
+                ? "Local city feeds, posts, events, deals, alerts, and conversations."
                 : "Sign in to catch up on your city feed."}
             </Text>
 
@@ -118,7 +115,7 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
                 <Text style={styles.authFieldLabel}>Username</Text>
                 <TextInput
                   style={styles.authInput}
-                  placeholder="yourname"
+                  placeholder="Choose a username"
                   placeholderTextColor="#64748B"
                   value={username}
                   onChangeText={setUsername}
@@ -157,6 +154,12 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
               />
             </View>
 
+            {mode === "login" && (
+              <Pressable style={styles.authForgotButton} disabled={loading}>
+                <Text style={styles.authForgotText}>Forgot password?</Text>
+              </Pressable>
+            )}
+
             <Pressable
               style={[styles.authPrimaryButton, loading && { opacity: 0.65 }]}
               onPress={handleAuth}
@@ -170,17 +173,40 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
                   : "Log In"}
               </Text>
             </Pressable>
-          </View>
 
-          <View style={styles.authInfoRow}>
-            <View style={styles.authInfoPill}>
-              <Text style={styles.authInfoText}>📍 Local</Text>
+            <View style={styles.authSwitchRow}>
+              <Text style={styles.authSwitchText}>
+                {mode === "signup"
+                  ? "Already have an account?"
+                  : "Don't have an account?"}
+              </Text>
+              <Pressable
+                onPress={() => setMode(mode === "signup" ? "login" : "signup")}
+                disabled={loading}
+              >
+                <Text style={styles.authSwitchLink}>
+                  {mode === "signup" ? "Log in" : "Sign up"}
+                </Text>
+              </Pressable>
             </View>
-            <View style={styles.authInfoPill}>
-              <Text style={styles.authInfoText}>🔒 Secure</Text>
+
+            <View style={styles.authDividerRow}>
+              <View style={styles.authDividerLine} />
+              <Text style={styles.authDividerSymbol}>♥</Text>
+              <View style={styles.authDividerLine} />
             </View>
-            <View style={styles.authInfoPill}>
-              <Text style={styles.authInfoText}>💬 Social</Text>
+
+            <View style={styles.authFeatureRow}>
+              {[
+                { label: "Feed", icon: "⌂" },
+                { label: "Post", icon: "+" },
+                { label: "Chat", icon: "✦" },
+              ].map((item) => (
+                <View key={item.label} style={styles.authFeaturePill}>
+                  <Text style={styles.authFeatureIcon}>{item.icon}</Text>
+                  <Text style={styles.authFeatureText}>{item.label}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </ScrollView>

@@ -203,6 +203,7 @@ export function MessagesScreen({
       const foundUser = users.find((user) => user.uid === otherUid);
 
       if (!foundUser) return;
+      if (blockedUserIds.includes(otherUid)) return;
 
       const existing = map.get(otherUid);
 
@@ -242,6 +243,7 @@ export function MessagesScreen({
     cleanedSearch.length === 0
       ? []
       : users.filter((user) =>
+          !blockedUserIds.includes(user.uid) &&
           user.username?.toLowerCase().includes(cleanedSearch)
         );
 
@@ -249,7 +251,7 @@ export function MessagesScreen({
     if (!selectedUser) return;
 
     const confirmBlock = window.confirm(
-      `Block @${selectedUser.username}? You will no longer see messages from this user.`
+      `Block @${selectedUser.username}? Their messages will be hidden and they will disappear from your conversations.`
     );
 
     if (!confirmBlock) return;
@@ -343,6 +345,8 @@ export function MessagesScreen({
   }
 
   if (selectedUser) {
+    const selectedUserBlocked = blockedUserIds.includes(selectedUser.uid);
+
     return (
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -365,12 +369,12 @@ export function MessagesScreen({
 
             <Pressable
               onPress={
-                blockedUserIds.includes(selectedUser.uid)
+                selectedUserBlocked
                   ? unblockSelectedUser
                   : blockSelectedUser
               }
               style={{
-                backgroundColor: blockedUserIds.includes(selectedUser.uid)
+                backgroundColor: selectedUserBlocked
                   ? "#166534"
                   : "#7F1D1D",
                 paddingVertical: 12,
@@ -382,7 +386,7 @@ export function MessagesScreen({
               }}
             >
               <Text style={{ color: "white", fontWeight: "900" }}>
-                {blockedUserIds.includes(selectedUser.uid)
+                {selectedUserBlocked
                   ? "✅ Unblock"
                   : "🚫 Block User"}
               </Text>
@@ -425,7 +429,13 @@ export function MessagesScreen({
                   }}
                   style={{
                     alignSelf: isMine ? "flex-end" : "flex-start",
-                    backgroundColor: isMine ? "#2563EB" : "#1E293B",
+                    backgroundColor: isMine
+                      ? "rgba(37, 99, 235, 0.82)"
+                      : "rgba(30, 41, 59, 0.34)",
+                    borderWidth: 1,
+                    borderColor: isMine
+                      ? "rgba(147, 197, 253, 0.34)"
+                      : "rgba(148, 163, 184, 0.22)",
                     padding: 12,
                     borderRadius: 16,
                     marginBottom: 10,
@@ -460,7 +470,9 @@ export function MessagesScreen({
                         flexDirection: "row",
                         gap: 6,
                         marginTop: 8,
-                        backgroundColor: "#020617",
+                        backgroundColor: "rgba(2, 6, 23, 0.72)",
+                        borderWidth: 1,
+                        borderColor: "rgba(148, 163, 184, 0.18)",
                         padding: 6,
                         borderRadius: 999,
                       }}
@@ -480,7 +492,9 @@ export function MessagesScreen({
             }}
             ListEmptyComponent={
               <Text style={{ color: "#94A3B8", marginTop: 20 }}>
-                No messages yet. Send the first one.
+                {selectedUserBlocked
+                  ? "This user is blocked. Unblock them to view or send messages."
+                  : "No messages yet. Send the first one."}
               </Text>
             }
           />
@@ -497,16 +511,17 @@ export function MessagesScreen({
               value={messageText}
               onChangeText={setMessageText}
               onSubmitEditing={sendMessage}
+              editable={!selectedUserBlocked}
               returnKeyType="send"
               blurOnSubmit={false}
-              placeholder="Type a message..."
+              placeholder={selectedUserBlocked ? "User is blocked" : "Type a message..."}
               placeholderTextColor="#64748B"
               style={{
                 flex: 1,
-                backgroundColor: "#0F172A",
+                backgroundColor: "rgba(15, 23, 42, 0.30)",
                 color: "white",
                 borderWidth: 1,
-                borderColor: "#334155",
+                borderColor: "rgba(148, 163, 184, 0.28)",
                 borderRadius: 14,
                 padding: 12,
               }}
@@ -514,8 +529,9 @@ export function MessagesScreen({
 
             <Pressable
               onPress={sendMessage}
+              disabled={selectedUserBlocked}
               style={{
-                backgroundColor: "#2563EB",
+                backgroundColor: selectedUserBlocked ? "#334155" : "#2563EB",
                 paddingHorizontal: 16,
                 justifyContent: "center",
                 borderRadius: 14,
@@ -546,10 +562,10 @@ export function MessagesScreen({
         placeholderTextColor="#64748B"
         autoCapitalize="none"
         style={{
-          backgroundColor: "#0F172A",
+          backgroundColor: "rgba(15, 23, 42, 0.30)",
           color: "white",
           borderWidth: 1,
-          borderColor: "#334155",
+          borderColor: "rgba(148, 163, 184, 0.28)",
           borderRadius: 14,
           padding: 12,
           marginBottom: 16,
@@ -568,9 +584,9 @@ export function MessagesScreen({
                 markConversationRead(item.uid);
               }}
               style={{
-                backgroundColor: "#0F172A",
+                backgroundColor: "rgba(15, 23, 42, 0.30)",
                 borderWidth: 1,
-                borderColor: "#334155",
+                borderColor: "rgba(148, 163, 184, 0.24)",
                 borderRadius: 18,
                 padding: 14,
                 marginBottom: 10,
@@ -602,9 +618,9 @@ export function MessagesScreen({
                 markConversationRead(item.user.uid);
               }}
               style={{
-                backgroundColor: "#0F172A",
+                backgroundColor: "rgba(15, 23, 42, 0.30)",
                 borderWidth: 1,
-                borderColor: "#334155",
+                borderColor: "rgba(148, 163, 184, 0.24)",
                 borderRadius: 18,
                 padding: 14,
                 marginBottom: 10,

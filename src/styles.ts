@@ -1,9 +1,29 @@
 import { StyleSheet } from "react-native";
 
+const glassPanel = {
+  backgroundColor: "rgba(30, 41, 59, 0.34)",
+  borderColor: "rgba(186, 230, 253, 0.26)",
+  shadowColor: "#000000",
+  shadowOpacity: 0.14,
+  shadowRadius: 22,
+  shadowOffset: { width: 0, height: 10 },
+  elevation: 3,
+};
+
+const glassInset = {
+  backgroundColor: "rgba(15, 23, 42, 0.28)",
+  borderColor: "rgba(186, 230, 253, 0.25)",
+};
+
+const glassAccent = {
+  backgroundColor: "rgba(19, 34, 56, 0.36)",
+  borderColor: "rgba(134, 181, 207, 0.38)",
+};
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#071326",
     paddingTop: 18,
   },
 
@@ -41,27 +61,27 @@ export const styles = StyleSheet.create({
 
   authScreen: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "transparent",
   },
 
   authContent: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 28,
   },
 
   authHero: {
     alignItems: "center",
-    marginBottom: 22,
+    marginBottom: 18,
   },
 
   authLogoMark: {
-    width: 148,
-    height: 148,
-    borderRadius: 42,
-    backgroundColor: "#0F172A",
-    borderWidth: 3,
+    width: 154,
+    height: 154,
+    borderRadius: 40,
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
+    borderWidth: 2,
     borderColor: "#86B5CF",
     alignItems: "center",
     justifyContent: "center",
@@ -76,8 +96,9 @@ export const styles = StyleSheet.create({
 
   authLogo: {
     color: "#FFFFFF",
-    fontSize: 38,
+    fontSize: 42,
     fontWeight: "900",
+    letterSpacing: -1.4,
   },
 
   authSubtitle: {
@@ -90,18 +111,21 @@ export const styles = StyleSheet.create({
   },
 
   authCard: {
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "#334155",
-    borderRadius: 28,
-    padding: 18,
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 26,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
   },
 
   authModeSegment: {
     flexDirection: "row",
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(15, 23, 42, 0.28)",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.22)",
     borderRadius: 999,
     padding: 5,
     marginBottom: 18,
@@ -129,21 +153,26 @@ export const styles = StyleSheet.create({
   },
 
   authTitle: {
-    color: "#FFFFFF",
-    fontSize: 25,
-    fontWeight: "900",
+    color: "#94A3B8",
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
+    letterSpacing: -0.2,
   },
 
   authHelpText: {
     color: "#94A3B8",
     fontWeight: "800",
     lineHeight: 21,
-    marginTop: 6,
-    marginBottom: 16,
+    marginTop: 10,
+    marginBottom: 22,
+    textAlign: "center",
+    maxWidth: 430,
+    alignSelf: "center",
   },
 
   authFieldGroup: {
-    marginTop: 12,
+    marginTop: 14,
   },
 
   authFieldLabel: {
@@ -155,23 +184,35 @@ export const styles = StyleSheet.create({
   },
 
   authInput: {
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(17, 28, 49, 0.32)",
     color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#334155",
-    borderRadius: 18,
+    borderColor: "rgba(186, 230, 253, 0.34)",
+    borderRadius: 16,
     paddingHorizontal: 15,
     paddingVertical: 14,
     fontWeight: "800",
+    width: "100%",
+  },
+
+  authForgotButton: {
+    alignSelf: "flex-end",
+    marginTop: 9,
+  },
+
+  authForgotText: {
+    color: "#86B5CF",
+    fontSize: 12,
+    fontWeight: "900",
   },
 
   authPrimaryButton: {
     backgroundColor: "#329BB8",
-    borderRadius: 18,
+    borderRadius: 14,
     minHeight: 54,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 18,
+    marginTop: 22,
     borderWidth: 1,
     borderColor: "#86B5CF",
   },
@@ -182,26 +223,278 @@ export const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  authInfoRow: {
+  authSwitchRow: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
+    alignItems: "center",
+    gap: 5,
     marginTop: 16,
   },
 
-  authInfoPill: {
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "#334155",
-    borderRadius: 999,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+  authSwitchText: {
+    color: "#CBD5E1",
+    fontWeight: "800",
   },
 
-  authInfoText: {
+  authSwitchLink: {
+    color: "#329BB8",
+    fontWeight: "900",
+  },
+
+  authDividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 24,
+  },
+
+  authDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#334155",
+  },
+
+  authDividerSymbol: {
+    color: "#86B5CF",
+    fontWeight: "900",
+    fontSize: 14,
+    lineHeight: 14,
+  },
+
+  authFeatureRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 18,
+    flexWrap: "wrap",
+  },
+
+  authFeaturePill: {
+    minWidth: 92,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    backgroundColor: "rgba(17, 28, 49, 0.30)",
+    borderWidth: 1,
+    borderColor: "rgba(186, 230, 253, 0.24)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+
+  authFeatureIcon: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+  },
+
+  authFeatureText: {
     color: "#CBD5E1",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  onboardingContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 30,
+  },
+
+  onboardingCard: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 26,
+  },
+
+  onboardingStepRow: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    marginBottom: 22,
+  },
+
+  onboardingStepBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: "rgba(148, 163, 184, 0.32)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  onboardingStepBadgeActive: {
+    backgroundColor: "#329BB8",
+  },
+
+  onboardingStepBadgeText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+  },
+
+  onboardingStepBadgeTextActive: {
+    color: "#0F172A",
+  },
+
+  onboardingKicker: {
+    color: "#86B5CF",
     fontSize: 12,
     fontWeight: "900",
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+
+  onboardingTitle: {
+    color: "#FFFFFF",
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "900",
+    textAlign: "center",
+    marginTop: 8,
+  },
+
+  onboardingBody: {
+    color: "#CBD5E1",
+    fontSize: 15,
+    lineHeight: 23,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 22,
+  },
+
+  onboardingChipGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    justifyContent: "center",
+  },
+
+  onboardingChoice: {
+    ...glassInset,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    maxWidth: "100%",
+  },
+
+  onboardingChoiceActive: {
+    backgroundColor: "#329BB8",
+    borderColor: "#86B5CF",
+  },
+
+  onboardingChoiceText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  onboardingChoiceTextActive: {
+    color: "#0F172A",
+  },
+
+  onboardingButtonRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 24,
+  },
+
+  onboardingPrimaryButton: {
+    flexGrow: 1,
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: "#329BB8",
+    borderWidth: 1,
+    borderColor: "#86B5CF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+
+  onboardingPrimaryText: {
+    color: "#0F172A",
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  onboardingSecondaryButton: {
+    flexGrow: 1,
+    minHeight: 54,
+    borderRadius: 18,
+    ...glassInset,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+
+  onboardingSecondaryText: {
+    color: "#BAE6FD",
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  notificationPreferenceCard: {
+    ...glassInset,
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 14,
+    marginTop: 16,
+    width: "100%",
+  },
+
+  notificationPreferenceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 11,
+  },
+
+  notificationPreferenceTitle: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+
+  notificationPreferenceHelp: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    lineHeight: 18,
+    marginTop: 3,
+  },
+
+  notificationToggle: {
+    minWidth: 54,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.28)",
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    alignItems: "center",
+  },
+
+  notificationToggleActive: {
+    backgroundColor: "#329BB8",
+    borderColor: "#86B5CF",
+  },
+
+  notificationToggleText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  notificationToggleTextActive: {
+    color: "#0F172A",
   },
 
   headerActions: {
@@ -213,9 +506,8 @@ export const styles = StyleSheet.create({
   },
 
   headerPill: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "#334155",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,
@@ -236,13 +528,13 @@ export const styles = StyleSheet.create({
   },
 
   searchPill: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 999,
     paddingVertical: 13,
     paddingHorizontal: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.24)",
   },
 
   searchPillText: {
@@ -286,33 +578,105 @@ export const styles = StyleSheet.create({
   },
 
   feedHeroBanner: {
-    backgroundColor: "#1E3A5F",
+    backgroundColor: "#17375F",
+    borderWidth: 1,
+    borderColor: "rgba(134, 181, 207, 0.26)",
     borderRadius: 28,
     padding: 22,
     marginBottom: 18,
     overflow: "hidden",
   },
 
-  heroCircleYellow: {
+  heroMoonGlow: {
     position: "absolute",
-    right: -40,
-    top: -30,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#F8B400",
-    opacity: 0.5,
+    right: -58,
+    top: -56,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: "rgba(248, 180, 0, 0.16)",
   },
 
-  heroCircleOrange: {
+  heroMoon: {
     position: "absolute",
-    left: -35,
-    bottom: -45,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "#F58A00",
-    opacity: 0.35,
+    right: -22,
+    top: -22,
+    width: 156,
+    height: 156,
+    borderRadius: 78,
+    backgroundColor: "rgba(255, 217, 102, 0.84)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.34)",
+  },
+
+  heroMoonShadow: {
+    position: "absolute",
+    right: 52,
+    top: -18,
+    width: 122,
+    height: 174,
+    borderRadius: 86,
+    backgroundColor: "rgba(17, 42, 74, 0.34)",
+  },
+
+  heroMoonCraterLarge: {
+    position: "absolute",
+    left: 34,
+    top: 46,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(153, 115, 36, 0.18)",
+  },
+
+  heroMoonCraterSmall: {
+    position: "absolute",
+    right: 38,
+    top: 32,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(153, 115, 36, 0.16)",
+  },
+
+  heroMoonCraterTiny: {
+    position: "absolute",
+    right: 48,
+    bottom: 38,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "rgba(153, 115, 36, 0.15)",
+  },
+
+  heroSkyStarOne: {
+    position: "absolute",
+    left: 28,
+    top: 34,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(248, 180, 0, 0.64)",
+  },
+
+  heroSkyStarTwo: {
+    position: "absolute",
+    right: 178,
+    top: 76,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255, 217, 102, 0.54)",
+  },
+
+  heroSkyStarThree: {
+    position: "absolute",
+    right: 92,
+    bottom: 36,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255, 217, 102, 0.48)",
   },
 
   feedHeroKicker: {
@@ -344,12 +708,11 @@ export const styles = StyleSheet.create({
   },
 
   heroCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     padding: 24,
     borderRadius: 30,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   heroKicker: {
@@ -376,12 +739,11 @@ export const styles = StyleSheet.create({
   },
 
   postCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     padding: 18,
     borderRadius: 28,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   postHeader: {
@@ -421,9 +783,8 @@ export const styles = StyleSheet.create({
   },
 
   expirationCard: {
-    backgroundColor: "#132238",
+    ...glassAccent,
     borderWidth: 1,
-    borderColor: "#2A6F97",
     borderRadius: 18,
     padding: 14,
     marginTop: 14,
@@ -435,9 +796,8 @@ export const styles = StyleSheet.create({
 
   expirationInput: {
     width: 118,
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 14,
     color: "#FFFFFF",
     fontWeight: "900",
@@ -448,9 +808,8 @@ export const styles = StyleSheet.create({
 
   expirationBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#132238",
+    ...glassAccent,
     borderWidth: 1,
-    borderColor: "#2A6F97",
     borderRadius: 999,
     paddingVertical: 7,
     paddingHorizontal: 11,
@@ -473,9 +832,8 @@ export const styles = StyleSheet.create({
   },
 
   tagComposerCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 18,
     padding: 14,
     marginTop: 12,
@@ -490,9 +848,9 @@ export const styles = StyleSheet.create({
   },
 
   postTag: {
-    backgroundColor: "#132238",
+    backgroundColor: "rgba(19, 34, 56, 0.34)",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.24)",
     borderRadius: 999,
     color: "#BAE6FD",
     fontSize: 11,
@@ -530,7 +888,7 @@ export const styles = StyleSheet.create({
   height: 320,
   borderRadius: 24,
   marginBottom: 15,
-  backgroundColor: "#0F172A",
+  backgroundColor: "rgba(15, 23, 42, 0.24)",
 },
 
   reactionRow: {
@@ -540,12 +898,11 @@ export const styles = StyleSheet.create({
   },
 
   reaction: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     paddingVertical: 9,
     paddingHorizontal: 13,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   reactionSelected: {
@@ -563,12 +920,11 @@ export const styles = StyleSheet.create({
   },
 
  commentButton: {
-  backgroundColor: "#0F172A",
+  ...glassInset,
   paddingVertical: 10,
   paddingHorizontal: 15,
   borderRadius: 999,
   borderWidth: 1,
-  borderColor: "#334155",
 },
 
   commentButtonText: {
@@ -577,12 +933,11 @@ export const styles = StyleSheet.create({
 },
 
   statChip: {
-    backgroundColor: "#132238",
+    ...glassAccent,
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   statChipText: {
@@ -631,33 +986,30 @@ export const styles = StyleSheet.create({
   },
 
   input: {
-  backgroundColor: "#1E293B",
+  ...glassPanel,
   color: "#FFFFFF",
     padding: 16,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#334155",
     marginBottom: 12,
     fontWeight: "700",
   },
 
   textArea: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     color: "#FFFFFF",
     minHeight: 190,
     padding: 16,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#334155",
     textAlignVertical: "top",
     fontSize: 16,
     fontWeight: "700",
   },
 
   pollComposerCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 22,
     padding: 14,
     marginTop: 14,
@@ -677,28 +1029,67 @@ export const styles = StyleSheet.create({
   },
 
   pollInput: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     color: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 16,
     padding: 12,
     fontWeight: "800",
   },
 
-  postTypeGrid: {
-    flexDirection: "row",
-    gap: 10,
+  pollToggleButton: {
+    ...glassPanel,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+
+  pollToggleButtonActive: {
+    backgroundColor: "#329BB8",
+    borderColor: "#86B5CF",
+  },
+
+  pollToggleText: {
+    color: "#CBD5E1",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  pollToggleTextActive: {
+    color: "#FFFFFF",
+  },
+
+  pollRequiredBadge: {
+    ...glassAccent,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+
+  pollRequiredBadgeText: {
+    color: "#86B5CF",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+
+  postTypeScroller: {
     marginTop: 10,
     marginBottom: 16,
   },
 
+  postTypeGrid: {
+    flexDirection: "row",
+    gap: 10,
+    paddingRight: 4,
+  },
+
   postTypeButton: {
-    flex: 1,
-    minHeight: 72,
-    backgroundColor: "#0F172A",
+    width: 104,
+    minHeight: 88,
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
@@ -711,14 +1102,16 @@ export const styles = StyleSheet.create({
   },
 
   postTypeEmoji: {
-    fontSize: 22,
+    fontSize: 24,
     marginBottom: 5,
   },
 
   postTypeText: {
     color: "#CBD5E1",
     fontWeight: "900",
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 15,
+    textAlign: "center",
   },
 
   postTypeTextActive: {
@@ -726,9 +1119,8 @@ export const styles = StyleSheet.create({
   },
 
   mediaModeCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 22,
     padding: 14,
     marginTop: 14,
@@ -739,11 +1131,11 @@ export const styles = StyleSheet.create({
 
   mediaModeSegment: {
     flexDirection: "row",
-    backgroundColor: "#1E293B",
+    backgroundColor: "rgba(30, 41, 59, 0.28)",
     borderRadius: 999,
     padding: 4,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.22)",
   },
 
   mediaModeButton: {
@@ -766,10 +1158,58 @@ export const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
-  mediaInfoCard: {
-    backgroundColor: "#0F172A",
+  mediaLimitGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 12,
+  },
+
+  mediaLimitPill: {
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderRadius: 18,
+    minWidth: 118,
+    flexGrow: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+
+  mediaLimitNumber: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+
+  mediaLimitLabel: {
+    color: "#94A3B8",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  mediaSavingsBadge: {
+    backgroundColor: "rgba(50, 155, 184, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(134, 181, 207, 0.42)",
+    borderRadius: 18,
+    minHeight: 58,
+    flexGrow: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mediaSavingsText: {
+    color: "#BAE6FD",
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  mediaInfoCard: {
+    ...glassInset,
+    borderWidth: 1,
     borderRadius: 18,
     padding: 12,
     marginTop: 10,
@@ -802,13 +1242,12 @@ export const styles = StyleSheet.create({
   },
 
   secondaryButton: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     padding: 16,
     borderRadius: 22,
     alignItems: "center",
     marginTop: 14,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   secondaryButtonText: {
@@ -839,12 +1278,11 @@ export const styles = StyleSheet.create({
   },
 
   chip: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   chipText: {
@@ -856,9 +1294,8 @@ export const styles = StyleSheet.create({
     marginTop: 18,
     padding: 15,
     borderRadius: 22,
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "#334155",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -877,12 +1314,11 @@ export const styles = StyleSheet.create({
   },
 
   profileCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     padding: 26,
     borderRadius: 30,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   profileAvatar: {
@@ -909,6 +1345,94 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
   },
 
+  followSummaryRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    width: "100%",
+  },
+
+  followSummaryCard: {
+    ...glassAccent,
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignItems: "center",
+  },
+
+  followSummaryNumber: {
+    color: "#FFFFFF",
+    fontSize: 21,
+    fontWeight: "900",
+  },
+
+  followSummaryLabel: {
+    color: "#BAE6FD",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 3,
+    textTransform: "uppercase",
+  },
+
+  profileActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+
+  followButton: {
+    flex: 1,
+    minHeight: 54,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#86B5CF",
+    backgroundColor: "#329BB8",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+
+  followButtonActive: {
+    backgroundColor: "rgba(15, 23, 42, 0.34)",
+  },
+
+  followButtonText: {
+    color: "#0F172A",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  followButtonTextActive: {
+    color: "#BAE6FD",
+  },
+
+  blockProfileButton: {
+    ...glassInset,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    marginTop: 10,
+    alignItems: "center",
+  },
+
+  blockProfileButtonActive: {
+    backgroundColor: "rgba(22, 101, 52, 0.28)",
+    borderColor: "rgba(134, 239, 172, 0.48)",
+  },
+
+  blockProfileButtonText: {
+    color: "#FCA5A5",
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  blockProfileButtonTextActive: {
+    color: "#BBF7D0",
+  },
+
   statsRow: {
     flexDirection: "row",
     gap: 10,
@@ -916,13 +1440,12 @@ export const styles = StyleSheet.create({
   },
 
   statBox: {
-  backgroundColor: "#0F172A",
+  ...glassInset,
   borderRadius: 20,
   padding: 14,
   minWidth: 82,
   alignItems: "center",
   borderWidth: 1,
-  borderColor: "#334155",
 },
 
 statNumber: {
@@ -940,9 +1463,9 @@ statLabel: {
 
   analyticsCard: {
     width: "100%",
-    backgroundColor: "#0B1220",
+    backgroundColor: "rgba(11, 18, 32, 0.66)",
     borderWidth: 1,
-    borderColor: "#2A6F97",
+    borderColor: "rgba(134, 181, 207, 0.34)",
     borderRadius: 22,
     padding: 16,
     marginTop: 18,
@@ -971,9 +1494,8 @@ statLabel: {
   analyticsMetric: {
     flex: 1,
     minHeight: 96,
-    backgroundColor: "#132238",
+    ...glassAccent,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 16,
     padding: 10,
     alignItems: "center",
@@ -1010,9 +1532,8 @@ statLabel: {
   },
 
   profileViewTabs: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 20,
     padding: 6,
     marginTop: 16,
@@ -1045,9 +1566,8 @@ statLabel: {
   },
 
   profileContentPanel: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 24,
     padding: 16,
     marginTop: 14,
@@ -1066,10 +1586,77 @@ statLabel: {
     lineHeight: 21,
   },
 
-  profilePostCard: {
-    backgroundColor: "#0F172A",
+  followingUserCard: {
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderRadius: 18,
+    padding: 12,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  followingUserPhoto: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: "rgba(15, 23, 42, 0.30)",
+  },
+
+  followingUserAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 17,
+    backgroundColor: "#329BB8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  followingUserAvatarText: {
+    color: "#0F172A",
+    fontWeight: "900",
+    fontSize: 19,
+  },
+
+  followingUserName: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  followingUserBio: {
+    color: "#94A3B8",
+    fontWeight: "800",
+    marginTop: 3,
+    lineHeight: 18,
+  },
+
+  followingUserCountPill: {
+    ...glassAccent,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    minWidth: 74,
+  },
+
+  followingUserCountText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
+  followingUserCountLabel: {
+    color: "#BAE6FD",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+
+  profilePostCard: {
+    ...glassInset,
+    borderWidth: 1,
     borderRadius: 18,
     padding: 14,
     marginTop: 10,
@@ -1097,9 +1684,8 @@ statLabel: {
   },
 
   profilePostActionButton: {
-    backgroundColor: "#132238",
+    ...glassAccent,
     borderWidth: 1,
-    borderColor: "#2A6F97",
     borderRadius: 999,
     paddingVertical: 9,
     paddingHorizontal: 13,
@@ -1126,9 +1712,9 @@ statLabel: {
   },
 
   profilePostTag: {
-    backgroundColor: "#132238",
+    backgroundColor: "rgba(19, 34, 56, 0.34)",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.24)",
     borderRadius: 999,
     color: "#BAE6FD",
     fontSize: 11,
@@ -1138,12 +1724,11 @@ statLabel: {
   },
 
   accountActionCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 24,
     padding: 16,
     marginTop: 18,
     borderWidth: 1,
-    borderColor: "#334155",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -1153,17 +1738,21 @@ statLabel: {
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: "#0F172A",
+    ...glassInset,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   accountIconText: {
     color: "#86B5CF",
     fontSize: 25,
     fontWeight: "900",
+  },
+
+  accountTextBlock: {
+    flex: 1,
+    minWidth: 0,
   },
 
   accountKicker: {
@@ -1175,7 +1764,7 @@ statLabel: {
 
   accountTitle: {
     color: "#FFFFFF",
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "900",
     marginTop: 3,
   },
@@ -1187,12 +1776,12 @@ statLabel: {
   },
 
   accountLogoutButton: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 999,
     paddingVertical: 11,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
+    flexShrink: 0,
   },
 
   accountLogoutText: {
@@ -1201,7 +1790,7 @@ statLabel: {
   },
 
   dangerActionCard: {
-    backgroundColor: "#450A0A",
+    backgroundColor: "rgba(69, 10, 10, 0.72)",
     borderRadius: 24,
     padding: 16,
     marginTop: 14,
@@ -1216,7 +1805,7 @@ statLabel: {
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: "#6B1F1F",
+    backgroundColor: "rgba(107, 31, 31, 0.68)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -1263,7 +1852,7 @@ statLabel: {
   },
 
   legalActionCard: {
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(15, 23, 42, 0.34)",
     borderRadius: 24,
     padding: 16,
     marginTop: 14,
@@ -1278,11 +1867,10 @@ statLabel: {
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   legalIconText: {
@@ -1309,9 +1897,8 @@ statLabel: {
   },
 
   legalPillButton: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -1348,12 +1935,11 @@ statLabel: {
   },
 
   emptyCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     padding: 25,
     borderRadius: 24,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   emptyTitle: {
@@ -1367,10 +1953,9 @@ statLabel: {
     left: 16,
     right: 16,
     bottom: 16,
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 28,
     borderWidth: 1,
-   borderColor: "#334155",
     paddingVertical: 10,
     paddingHorizontal: 8,
     flexDirection: "row",
@@ -1412,7 +1997,7 @@ statLabel: {
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1E293B",
+    backgroundColor: "rgba(30, 41, 59, 0.34)",
   },
 
   navIcon: {
@@ -1455,18 +2040,18 @@ statLabel: {
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(17, 24, 39, 0.45)",
+    backgroundColor: "rgba(17, 24, 39, 0.52)",
     justifyContent: "flex-end",
   },
 
   modalSheet: {
   maxHeight: "92%",
-  backgroundColor: "#0F172A",
+  backgroundColor: "rgba(15, 23, 42, 0.78)",
     borderTopLeftRadius: 34,
     borderTopRightRadius: 34,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.28)",
   },
 
   modalHeader: {
@@ -1489,19 +2074,17 @@ statLabel: {
   },
 
   emptyCommentCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#334155",
   },
 
   commentCard: {
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#334155",
     marginTop: 12,
 marginBottom: 12,
   },
@@ -1510,7 +2093,7 @@ marginBottom: 12,
     marginLeft: 14,
     marginTop: 12,
     marginBottom: 6,
-    backgroundColor: "#0F172A",
+    backgroundColor: "rgba(15, 23, 42, 0.28)",
     borderLeftWidth: 3,
     borderLeftColor: "#38BDF8",
     paddingLeft: 14,
@@ -1541,11 +2124,10 @@ marginBottom: 12,
 },
 
  commentComposer: {
-  backgroundColor: "#1E293B",
+  ...glassPanel,
     borderRadius: 24,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#334155",
     marginTop: 16,
   },
 
@@ -1574,12 +2156,11 @@ marginBottom: 12,
   },
 
  previewCommentCard: {
-  backgroundColor: "#1E293B",
+  ...glassPanel,
   borderRadius: 16,
   padding: 14,
   marginBottom: 10,
   borderWidth: 1,
-  borderColor: "#334155",
 },
 
   previewCommentMeta: {
@@ -1595,14 +2176,13 @@ marginBottom: 12,
   },
 
   replyCard: {
-  backgroundColor: "#0F172A",
+  ...glassInset,
   borderRadius: 16,
   paddingVertical: 10,
   paddingHorizontal: 12,
   marginLeft: 18,
   marginTop: 8,
   borderWidth: 1,
-  borderColor: "#334155",
 },
 
   commentActionRow: {
@@ -1623,18 +2203,16 @@ marginBottom: 12,
   },
 
   pollCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 22,
     padding: 14,
     marginBottom: 15,
   },
 
   saleCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 22,
     padding: 14,
     marginBottom: 15,
@@ -1671,9 +2249,8 @@ marginBottom: 12,
   },
 
   postFieldsCard: {
-    backgroundColor: "#0F172A",
+    ...glassInset,
     borderWidth: 1,
-    borderColor: "#334155",
     borderRadius: 18,
     padding: 13,
     marginBottom: 15,
@@ -1730,9 +2307,9 @@ marginBottom: 12,
     minHeight: 44,
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "#1E293B",
+    backgroundColor: "rgba(30, 41, 59, 0.30)",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.24)",
   },
 
   pollOptionSelected: {
@@ -1777,12 +2354,11 @@ marginBottom: 12,
 
   feedToggleRow: {
     flexDirection: "row",
-    backgroundColor: "#1E293B",
+    ...glassPanel,
     borderRadius: 999,
     padding: 5,
     marginBottom: 16,
     borderWidth: 1,
-   borderColor: "#334155",
   },
 
   feedToggleButton: {
@@ -1816,20 +2392,19 @@ marginBottom: 12,
   },
 
   profileBioInput: {
-  backgroundColor: "#1E293B",
+  ...glassPanel,
   color: "#FFFFFF",
     minHeight: 110,
     padding: 15,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: "#334155",
     textAlignVertical: "top",
     marginBottom: 12,
     fontWeight: "700",
   },
 
   uploadingCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
     borderWidth: 1,
     borderColor: "#F8B400",
     borderRadius: 22,
@@ -1857,9 +2432,9 @@ marginBottom: 12,
   },
 
   categoryFilterChip: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "rgba(148, 163, 184, 0.24)",
     paddingVertical: 11,
     paddingHorizontal: 15,
     borderRadius: 999,

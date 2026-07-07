@@ -6,7 +6,23 @@ import type { Post } from "../types";
 import { formatExpirationLabel, getExpirationTimestamp } from "../utils/expiration";
 import { devLog, getStableImageSource } from "../utils/media";
 
-type ProfileView = "overview" | "posts" | "saved";
+type ProfileView = "overview" | "posts" | "saved" | "following";
+
+type FollowUserSummary = {
+  uid: string;
+  username: string;
+  photoUrl?: string;
+  bio?: string;
+  followerCount?: number;
+  followingCount?: number;
+};
+
+type NotificationPreferences = {
+  messages: boolean;
+  comments: boolean;
+  follows: boolean;
+  localAlerts: boolean;
+};
 
 type ProfileScreenProps = {
   username: string;
@@ -26,8 +42,16 @@ type ProfileScreenProps = {
     saves: number;
     shares: number;
   };
+  followerCount: number;
+  followingCount: number;
+  followingUsers: FollowUserSummary[];
+  notificationsEnabled: boolean;
+  notificationPreferences: NotificationPreferences;
   posts: Post[];
   savedPosts: Post[];
+  onOpenFollowingUser: (user: FollowUserSummary) => void;
+  onEnableNotifications: () => Promise<void>;
+  onToggleNotificationPreference: (key: keyof NotificationPreferences) => void;
   onSaveProfile: (username: string, bio: string, imageUri?: string) => void;
   onUpdatePost: (
     postId: string,
@@ -53,8 +77,16 @@ export function ProfileScreen({
   photoUrl,
   email,
   stats,
+  followerCount,
+  followingCount,
+  followingUsers,
+  notificationsEnabled,
+  notificationPreferences,
   posts,
   savedPosts,
+ onOpenFollowingUser,
+ onEnableNotifications,
+ onToggleNotificationPreference,
  onSaveProfile,
 onUpdatePost,
 onOpenPost,
@@ -225,6 +257,17 @@ onDeleteAccount,
 
         <Text style={styles.profileName}>@{username || "username"}</Text>
 
+        <View style={styles.followSummaryRow}>
+          <View style={styles.followSummaryCard}>
+            <Text style={styles.followSummaryNumber}>{followerCount}</Text>
+            <Text style={styles.followSummaryLabel}>Followers</Text>
+          </View>
+          <View style={styles.followSummaryCard}>
+            <Text style={styles.followSummaryNumber}>{followingCount}</Text>
+            <Text style={styles.followSummaryLabel}>Following</Text>
+          </View>
+        </View>
+
         <Text style={styles.muted}>
           {isEditing ? "Tap your photo to change it." : "Your CityPeak profile"}
         </Text>
@@ -233,9 +276,9 @@ onDeleteAccount,
   <View
     style={{
       marginTop: 16,
-      backgroundColor: "#0F172A",
+      backgroundColor: "rgba(15, 23, 42, 0.30)",
       borderWidth: 1,
-      borderColor: "#334155",
+      borderColor: "rgba(186, 230, 253, 0.25)",
       borderRadius: 16,
       padding: 16,
       marginHorizontal: 12,
@@ -294,6 +337,60 @@ onDeleteAccount,
           </View>
         </View>
 
+        <View style={styles.notificationPreferenceCard}>
+          <View style={styles.profilePostHeader}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.analyticsKicker}>Notifications</Text>
+              <Text style={styles.analyticsTitle}>
+                {notificationsEnabled ? "Alerts are on" : "Choose your alerts"}
+              </Text>
+            </View>
+            {!notificationsEnabled && (
+              <Pressable
+                style={styles.profilePostActionButton}
+                onPress={onEnableNotifications}
+              >
+                <Text style={styles.profilePostActionText}>Turn on</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {(
+            [
+              ["messages", "Messages", "Direct chats"],
+              ["comments", "Comments", "Replies and post activity"],
+              ["follows", "Follows", "New followers"],
+              ["localAlerts", "Local alerts", "Important nearby updates"],
+            ] as [keyof NotificationPreferences, string, string][]
+          ).map(([key, label, helper]) => (
+            <Pressable
+              key={key}
+              style={styles.notificationPreferenceRow}
+              onPress={() => onToggleNotificationPreference(key)}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.notificationPreferenceTitle}>{label}</Text>
+                <Text style={styles.notificationPreferenceHelp}>{helper}</Text>
+              </View>
+              <View
+                style={[
+                  styles.notificationToggle,
+                  notificationPreferences[key] && styles.notificationToggleActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.notificationToggleText,
+                    notificationPreferences[key] && styles.notificationToggleTextActive,
+                  ]}
+                >
+                  {notificationPreferences[key] ? "On" : "Off"}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+
         <View style={styles.analyticsCard}>
           <Text style={styles.analyticsKicker}>Engagement</Text>
           <Text style={styles.analyticsTitle}>Your post analytics</Text>
@@ -324,6 +421,7 @@ onDeleteAccount,
         {([
           { key: "overview", label: "Overview" },
           { key: "posts", label: "Your Posts" },
+          { key: "following", label: "Following" },
           { key: "saved", label: "Saved" },
         ] as { key: ProfileView; label: string }[]).map((item) => {
           const active = profileView === item.key;
@@ -349,6 +447,64 @@ onDeleteAccount,
             <Text style={styles.profileContentEmpty}>Posts you create will show here.</Text>
           ) : (
             posts.map((post) => renderProfilePost(post, "owned"))
+          )}
+        </View>
+      )}
+
+      {profileView === "following" && (
+        <View style={styles.profileContentPanel}>
+          <Text style={styles.profileContentTitle}>People you follow</Text>
+          {followingUsers.length === 0 ? (
+            <Text style={styles.profileContentEmpty}>
+              Follow local voices and they will show here.
+            </Text>
+          ) : (
+            followingUsers.map((user) => {
+              const userPhotoSource = getStableImageSource(
+                user.photoUrl,
+                "following user photo"
+              );
+
+              return (
+                <Pressable
+                  key={user.uid}
+                  style={styles.followingUserCard}
+                  onPress={() => onOpenFollowingUser(user)}
+                >
+                  {userPhotoSource ? (
+                    <Image
+                      source={userPhotoSource}
+                      style={styles.followingUserPhoto}
+                      onError={() =>
+                        devLog("[media] failed following user photo", user.photoUrl)
+                      }
+                    />
+                  ) : (
+                    <View style={styles.followingUserAvatar}>
+                      <Text style={styles.followingUserAvatarText}>
+                        {user.username[0]?.toUpperCase() || "?"}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={styles.followingUserName}>
+                      @{user.username}
+                    </Text>
+                    <Text numberOfLines={2} style={styles.followingUserBio}>
+                      {user.bio || "CityPeak local"}
+                    </Text>
+                  </View>
+
+                  <View style={styles.followingUserCountPill}>
+                    <Text style={styles.followingUserCountText}>
+                      {user.followerCount || 0}
+                    </Text>
+                    <Text style={styles.followingUserCountLabel}>followers</Text>
+                  </View>
+                </Pressable>
+              );
+            })
           )}
         </View>
       )}
@@ -409,9 +565,11 @@ onDeleteAccount,
           </Text>
         </View>
 
-        <View style={{ flex: 1 }}>
+        <View style={styles.accountTextBlock}>
           <Text style={styles.accountKicker}>Account</Text>
-          <Text style={styles.accountTitle}>@{username || "username"}</Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={styles.accountTitle}>
+            @{username || "username"}
+          </Text>
           <Text numberOfLines={2} style={styles.accountSubtitle}>
             {email || "Signed in to CityPeak"}
           </Text>

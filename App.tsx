@@ -1,8 +1,11 @@
 import "./global.css";
 import { Platform, Share } from "react-native";
+import Constants from "expo-constants";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as Location from "expo-location";
+import * as Notifications from "expo-notifications";
+import * as VideoThumbnails from "expo-video-thumbnails";
 import { decode } from "base64-arraybuffer";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -13,10 +16,12 @@ import {
   SafeAreaView,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native"; import { User, onAuthStateChanged, signOut, deleteUser } from "firebase/auth";
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
   deleteDoc,
@@ -33,12 +38,14 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 import { auth, db } from "./firebase";
 import { supabase } from "./supabase";
 
 import { BottomNav } from "./src/components/BottomNav";
+import { CityBackdrop } from "./src/components/CityBackdrop";
 import { PostDetailsModal } from "./src/components/PostDetailsModal";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { CreatePostScreen } from "./src/screens/CreatePostScreen";
@@ -70,6 +77,10 @@ type PublicUserProfile = {
   email?: string;
   bio?: string;
   photoUrl?: string;
+  followerCount?: number;
+  followingCount?: number;
+  followers?: string[];
+  following?: string[];
   stats: {
     posts: number;
     reactions: number;
@@ -83,6 +94,41 @@ type PublicUserProfile = {
   };
 };
 
+type FollowUserSummary = {
+  uid: string;
+  username: string;
+  photoUrl?: string;
+  bio?: string;
+  followerCount?: number;
+  followingCount?: number;
+};
+
+type NotificationPreferences = {
+  messages: boolean;
+  comments: boolean;
+  follows: boolean;
+  localAlerts: boolean;
+};
+
+const defaultNotificationPreferences: NotificationPreferences = {
+  messages: true,
+  comments: true,
+  follows: true,
+  localAlerts: true,
+};
+
+const onboardingAreas = ["Long Beach", "Los Angeles", "Irvine", "Pasadena"];
+const onboardingInterests = [
+  "Alerts",
+  "Food",
+  "Events",
+  "Jobs",
+  "Deals",
+  "Questions",
+  "Hidden Gems",
+  "Recommendations",
+];
+
 type UserProfileTarget = {
   uid?: string;
   username?: string;
@@ -90,10 +136,16 @@ type UserProfileTarget = {
   photoUrl?: string;
 };
 
-const REGULAR_VIDEO_MAX_MS = 60 * 1000;
+const REGULAR_VIDEO_MAX_MS = 30 * 1000;
 const TUTORIAL_VIDEO_MAX_MS = 10 * 60 * 1000;
 const REGULAR_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
 const TUTORIAL_VIDEO_MAX_BYTES = 250 * 1024 * 1024;
+
+type ImageUploadOptions = {
+  width?: number;
+  compress?: number;
+  skipProcessing?: boolean;
+};
 
 function getPostStats(userPosts: Post[]) {
   const totalReactions = userPosts.reduce((total, post) => {
@@ -158,16 +210,300 @@ function emptyStats() {
   };
 }
 
+function OnboardingScreen({
+  initialArea,
+  notificationPreferences,
+  onComplete,
+  onEnableNotifications,
+}: {
+  initialArea: string;
+  notificationPreferences: NotificationPreferences;
+  onComplete: (settings: {
+    area: string;
+    interests: string[];
+    notificationPreferences: NotificationPreferences;
+  }) => Promise<void>;
+  onEnableNotifications: (
+    preferences: NotificationPreferences
+  ) => Promise<boolean>;
+}) {
+  const [step, setStep] = useState(0);
+  const [area, setArea] = useState(initialArea || "Long Beach");
+  const [customArea, setCustomArea] = useState("");
+  const [interests, setInterests] = useState<string[]>(["Alerts", "Events"]);
+  const [prefs, setPrefs] = useState<NotificationPreferences>(
+    notificationPreferences
+  );
+  const [saving, setSaving] = useState(false);
+
+  const chosenArea = customArea.trim() || area;
+
+  function toggleInterest(interest: string) {
+    setInterests((current) =>
+      current.includes(interest)
+        ? current.filter((item) => item !== interest)
+        : [...current, interest]
+    );
+  }
+
+  function togglePreference(key: keyof NotificationPreferences) {
+    setPrefs((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }
+
+  async function finish(shouldRequestNotifications: boolean) {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+      let finalPrefs = prefs;
+
+      if (shouldRequestNotifications) {
+        const enabled = await onEnableNotifications(prefs);
+        finalPrefs = {
+          ...prefs,
+          messages: enabled && prefs.messages,
+          comments: enabled && prefs.comments,
+          follows: enabled && prefs.follows,
+          localAlerts: enabled && prefs.localAlerts,
+        };
+        setPrefs(finalPrefs);
+      }
+
+      await onComplete({
+        area: chosenArea,
+        interests,
+        notificationPreferences: finalPrefs,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <CityBackdrop />
+      <ScrollView
+        style={styles.authScreen}
+        contentContainerStyle={styles.onboardingContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.onboardingCard}>
+          <View style={styles.onboardingStepRow}>
+            {[0, 1, 2].map((index) => (
+              <View
+                key={index}
+                style={[
+                  styles.onboardingStepBadge,
+                  index === step && styles.onboardingStepBadgeActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.onboardingStepBadgeText,
+                    index === step && styles.onboardingStepBadgeTextActive,
+                  ]}
+                >
+                  {index + 1}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.onboardingKicker}>Welcome to CityPeak</Text>
+          <Text style={styles.onboardingTitle}>
+            {step === 0
+              ? "Start with your city"
+              : step === 1
+              ? "Shape your local feed"
+              : "Choose useful notifications"}
+          </Text>
+          <Text style={styles.onboardingBody}>
+            {step === 0
+              ? "Pick the area you want CityPeak to open first. You can always change it later."
+              : step === 1
+              ? "Choose a few topics so your first feed feels relevant instead of empty."
+              : "Turn on the alerts that matter. You can change these anytime from your profile."}
+          </Text>
+
+          {step === 0 && (
+            <>
+              <View style={styles.onboardingChipGrid}>
+                {onboardingAreas.map((item) => {
+                  const active = area === item && !customArea.trim();
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.onboardingChoice,
+                        active && styles.onboardingChoiceActive,
+                      ]}
+                      onPress={() => {
+                        setArea(item);
+                        setCustomArea("");
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.onboardingChoiceText,
+                          active && styles.onboardingChoiceTextActive,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <TextInput
+                style={[styles.authInput, { marginTop: 14 }]}
+                placeholder="Or type your city"
+                placeholderTextColor="#64748B"
+                value={customArea}
+                onChangeText={setCustomArea}
+              />
+            </>
+          )}
+
+          {step === 1 && (
+            <View style={styles.onboardingChipGrid}>
+              {onboardingInterests.map((interest) => {
+                const active = interests.includes(interest);
+
+                return (
+                  <Pressable
+                    key={interest}
+                    style={[
+                      styles.onboardingChoice,
+                      active && styles.onboardingChoiceActive,
+                    ]}
+                    onPress={() => toggleInterest(interest)}
+                  >
+                    <Text
+                      style={[
+                        styles.onboardingChoiceText,
+                        active && styles.onboardingChoiceTextActive,
+                      ]}
+                    >
+                      {interest}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {step === 2 && (
+            <View style={styles.notificationPreferenceCard}>
+              {(
+                [
+                  ["messages", "Messages", "Replies from neighbors and direct chats"],
+                  ["comments", "Comments", "Replies and activity on your posts"],
+                  ["follows", "Follows", "New followers and profile activity"],
+                  ["localAlerts", "Local alerts", "Important nearby updates"],
+                ] as [keyof NotificationPreferences, string, string][]
+              ).map(([key, label, helper]) => (
+                <Pressable
+                  key={key}
+                  style={styles.notificationPreferenceRow}
+                  onPress={() => togglePreference(key)}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.notificationPreferenceTitle}>{label}</Text>
+                    <Text style={styles.notificationPreferenceHelp}>{helper}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.notificationToggle,
+                      prefs[key] && styles.notificationToggleActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.notificationToggleText,
+                        prefs[key] && styles.notificationToggleTextActive,
+                      ]}
+                    >
+                      {prefs[key] ? "On" : "Off"}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.onboardingButtonRow}>
+            {step > 0 && (
+              <Pressable
+                style={styles.onboardingSecondaryButton}
+                onPress={() => setStep((current) => current - 1)}
+                disabled={saving}
+              >
+                <Text style={styles.onboardingSecondaryText}>Back</Text>
+              </Pressable>
+            )}
+
+            {step < 2 ? (
+              <Pressable
+                style={styles.onboardingPrimaryButton}
+                onPress={() => setStep((current) => current + 1)}
+                disabled={saving}
+              >
+                <Text style={styles.onboardingPrimaryText}>Continue</Text>
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={styles.onboardingSecondaryButton}
+                  onPress={() => finish(false)}
+                  disabled={saving}
+                >
+                  <Text style={styles.onboardingSecondaryText}>Maybe later</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.onboardingPrimaryButton}
+                  onPress={() => finish(true)}
+                  disabled={saving}
+                >
+                  <Text style={styles.onboardingPrimaryText}>
+                    {saving ? "Saving..." : "Turn on"}
+                  </Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 function PublicUserProfileModal({
   profile,
   currentUserId,
+  isFollowing,
+  followBusy,
+  isBlocked,
+  blockBusy,
   onClose,
   onMessage,
+  onToggleFollow,
+  onToggleBlock,
 }: {
   profile: PublicUserProfile | null;
   currentUserId?: string;
+  isFollowing: boolean;
+  followBusy: boolean;
+  isBlocked: boolean;
+  blockBusy: boolean;
   onClose: () => void;
   onMessage: (profile: PublicUserProfile) => void;
+  onToggleFollow: (profile: PublicUserProfile) => void;
+  onToggleBlock: (profile: PublicUserProfile) => void;
 }) {
   if (!profile) return null;
 
@@ -203,13 +539,28 @@ function PublicUserProfileModal({
 
               <Text style={styles.profileName}>@{profile.username || "user"}</Text>
 
+              <View style={styles.followSummaryRow}>
+                <View style={styles.followSummaryCard}>
+                  <Text style={styles.followSummaryNumber}>
+                    {Math.max(0, profile.followerCount || 0)}
+                  </Text>
+                  <Text style={styles.followSummaryLabel}>Followers</Text>
+                </View>
+                <View style={styles.followSummaryCard}>
+                  <Text style={styles.followSummaryNumber}>
+                    {Math.max(0, profile.followingCount || 0)}
+                  </Text>
+                  <Text style={styles.followSummaryLabel}>Following</Text>
+                </View>
+              </View>
+
               {!!profile.bio ? (
                 <View
                   style={{
                     marginTop: 16,
-                    backgroundColor: "#0F172A",
+                    backgroundColor: "rgba(15, 23, 42, 0.30)",
                     borderWidth: 1,
-                    borderColor: "#334155",
+                    borderColor: "rgba(148, 163, 184, 0.24)",
                     borderRadius: 16,
                     padding: 16,
                     marginHorizontal: 12,
@@ -293,11 +644,60 @@ function PublicUserProfileModal({
             </View>
 
             {!isSelf && (
+              <View style={styles.profileActionRow}>
+                <Pressable
+                  style={[
+                    styles.followButton,
+                    isFollowing && styles.followButtonActive,
+                    (followBusy || isBlocked) && { opacity: 0.65 },
+                  ]}
+                  onPress={() => onToggleFollow(profile)}
+                  disabled={followBusy || isBlocked}
+                >
+                  <Text
+                    style={[
+                      styles.followButtonText,
+                      isFollowing && styles.followButtonTextActive,
+                    ]}
+                  >
+                    {followBusy ? "Saving..." : isFollowing ? "Following" : "Follow"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
+                  onPress={() => onMessage(profile)}
+                  disabled={isBlocked}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isBlocked ? "Blocked" : "Message"}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {!isSelf && (
               <Pressable
-                style={styles.primaryButton}
-                onPress={() => onMessage(profile)}
+                style={[
+                  styles.blockProfileButton,
+                  isBlocked && styles.blockProfileButtonActive,
+                  blockBusy && { opacity: 0.65 },
+                ]}
+                onPress={() => onToggleBlock(profile)}
+                disabled={blockBusy}
               >
-                <Text style={styles.primaryButtonText}>Message @{profile.username}</Text>
+                <Text
+                  style={[
+                    styles.blockProfileButtonText,
+                    isBlocked && styles.blockProfileButtonTextActive,
+                  ]}
+                >
+                  {blockBusy
+                    ? "Saving..."
+                    : isBlocked
+                    ? "Unblock user"
+                    : "Block user"}
+                </Text>
               </Pressable>
             )}
           </ScrollView>
@@ -322,7 +722,7 @@ function AdminLoadedVideo({ uri }: { uri: string }) {
         height: 220,
         borderRadius: 16,
         marginTop: 12,
-        backgroundColor: "#0F172A",
+        backgroundColor: "rgba(15, 23, 42, 0.30)",
       }}
     />
   );
@@ -352,9 +752,9 @@ function AdminVideoPreview({ uri }: { uri: string }) {
         height: 220,
         borderRadius: 16,
         marginTop: 12,
-        backgroundColor: "#0F172A",
+        backgroundColor: "rgba(15, 23, 42, 0.30)",
         borderWidth: 1,
-        borderColor: "#334155",
+        borderColor: "rgba(148, 163, 184, 0.24)",
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -372,6 +772,18 @@ export default function App() {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
+  const [notificationPreferences, setNotificationPreferences] =
+    useState<NotificationPreferences>(defaultNotificationPreferences);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [expoPushToken, setExpoPushToken] = useState("");
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [currentFollowingIds, setCurrentFollowingIds] = useState<string[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<FollowUserSummary[]>([]);
+  const [followBusyUid, setFollowBusyUid] = useState<string | null>(null);
+  const [blockBusyUid, setBlockBusyUid] = useState<string | null>(null);
   const [postingStatus, setPostingStatus] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedUserProfile, setSelectedUserProfile] =
@@ -411,6 +823,18 @@ export default function App() {
           setUsername(data.username || user.email?.split("@")[0] || "user");
           setBio(data.bio || "");
           setPhotoUrl(data.photoUrl || "");
+          setSelectedArea(data.selectedArea || "Long Beach");
+          setHasCompletedOnboarding(data.hasCompletedOnboarding === true);
+          setNotificationPreferences({
+            ...defaultNotificationPreferences,
+            ...(data.notificationPreferences || {}),
+          });
+          setNotificationsEnabled(data.notificationsEnabled === true);
+          setExpoPushToken(data.expoPushToken || "");
+          setBlockedUserIds(Array.isArray(data.blockedUserIds) ? data.blockedUserIds : []);
+          setFollowerCount(data.followerCount || 0);
+          setFollowingCount(data.followingCount || 0);
+          setCurrentFollowingIds(Array.isArray(data.following) ? data.following : []);
 
           setIsAdmin(data.isAdmin === true);
 
@@ -419,11 +843,28 @@ export default function App() {
           setUsername(user.email?.split("@")[0] || "user");
           setBio("");
           setPhotoUrl("");
+          setHasCompletedOnboarding(false);
+          setNotificationPreferences(defaultNotificationPreferences);
+          setNotificationsEnabled(false);
+          setExpoPushToken("");
+          setBlockedUserIds([]);
+          setFollowerCount(0);
+          setFollowingCount(0);
+          setCurrentFollowingIds([]);
         }
       } else {
         setUsername("");
         setBio("");
         setPhotoUrl("");
+        setHasCompletedOnboarding(true);
+        setNotificationPreferences(defaultNotificationPreferences);
+        setNotificationsEnabled(false);
+        setExpoPushToken("");
+        setBlockedUserIds([]);
+        setFollowerCount(0);
+        setFollowingCount(0);
+        setCurrentFollowingIds([]);
+        setFollowingUsers([]);
       }
     });
 
@@ -432,6 +873,95 @@ export default function App() {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    countUsage("listener-create:current-user-profile");
+    const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (userDoc) => {
+      countUsage("current-user-profile-snapshot");
+
+      if (!userDoc.exists()) return;
+
+      const data = userDoc.data();
+      setUsername(data.username || currentUser.email?.split("@")[0] || "user");
+      setBio(data.bio || "");
+      setPhotoUrl(data.photoUrl || "");
+      setSelectedArea(data.selectedArea || "Long Beach");
+      setHasCompletedOnboarding(data.hasCompletedOnboarding === true);
+      setNotificationPreferences({
+        ...defaultNotificationPreferences,
+        ...(data.notificationPreferences || {}),
+      });
+      setNotificationsEnabled(data.notificationsEnabled === true);
+      setExpoPushToken(data.expoPushToken || "");
+      setBlockedUserIds(Array.isArray(data.blockedUserIds) ? data.blockedUserIds : []);
+      setFollowerCount(Math.max(0, data.followerCount || 0));
+      setFollowingCount(Math.max(0, data.followingCount || 0));
+      setCurrentFollowingIds(Array.isArray(data.following) ? data.following : []);
+      setIsAdmin(data.isAdmin === true);
+    });
+
+    return () => {
+      countUsage("listener-cleanup:current-user-profile");
+      unsubscribe();
+    };
+  }, [currentUser?.uid, currentUser?.email]);
+
+  useEffect(() => {
+    let canceled = false;
+
+    async function loadFollowingUsers() {
+      if (!currentFollowingIds.length) {
+        setFollowingUsers([]);
+        return;
+      }
+
+      try {
+        const chunks: string[][] = [];
+
+        for (let index = 0; index < currentFollowingIds.length; index += 10) {
+          chunks.push(currentFollowingIds.slice(index, index + 10));
+        }
+
+        const snapshots = await Promise.all(
+          chunks.map((chunk) =>
+            getDocs(query(collection(db, "users"), where("uid", "in", chunk)))
+          )
+        );
+
+        if (canceled) return;
+
+        const loadedUsers = snapshots
+          .flatMap((snapshot) =>
+            snapshot.docs.map((userDoc) => {
+              const data = userDoc.data();
+
+              return {
+                uid: data.uid || userDoc.id,
+                username: data.username || "user",
+                photoUrl: data.photoUrl || "",
+                bio: data.bio || "",
+                followerCount: Math.max(0, data.followerCount || 0),
+                followingCount: Math.max(0, data.followingCount || 0),
+              } as FollowUserSummary;
+            })
+          )
+          .filter((user) => !blockedUserIds.includes(user.uid))
+          .sort((left, right) => left.username.localeCompare(right.username));
+
+        setFollowingUsers(loadedUsers);
+      } catch (error) {
+        devLog("[profile] failed to load following users", error);
+      }
+    }
+
+    loadFollowingUsers();
+
+    return () => {
+      canceled = true;
+    };
+  }, [currentFollowingIds, blockedUserIds]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -581,6 +1111,7 @@ export default function App() {
 
         return (
           data.fromUid !== currentUser.uid &&
+          !blockedUserIds.includes(data.fromUid) &&
           !(data.readBy ?? []).includes(currentUser.uid)
         );
       }).length;
@@ -592,7 +1123,7 @@ export default function App() {
       countUsage("listener-cleanup:unread-messages");
       unsubscribe();
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, blockedUserIds]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -634,12 +1165,15 @@ export default function App() {
     };
   }, [currentUser?.uid, isAdmin, tab]);
 
-  async function prepareImageForUpload(uri: string) {
+  async function prepareImageForUpload(
+    uri: string,
+    options: ImageUploadOptions = {}
+  ) {
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 1600 } }],
+      [{ resize: { width: options.width ?? 1600 } }],
       {
-        compress: 0.72,
+        compress: options.compress ?? 0.72,
         format: ImageManipulator.SaveFormat.JPEG,
       }
     );
@@ -654,64 +1188,194 @@ export default function App() {
     return result.uri;
   }
 
-  async function uploadMediaToSupabase(uri: string, mediaType?: MediaType) {
-  try {
-    countUsage("storage-upload-start", mediaType || "unknown");
-    const extension = mediaType === "video" ? "mp4" : "jpg";
-    const fileName = `${Date.now()}.${extension}`;
-    const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
-    const uploadUri = mediaType === "video" ? uri : await prepareImageForUpload(uri);
+  async function uploadMediaToSupabase(
+    uri: string,
+    mediaType?: MediaType,
+    imageOptions?: ImageUploadOptions
+  ) {
+    try {
+      countUsage("storage-upload-start", mediaType || "unknown");
+      const extension = mediaType === "video" ? "mp4" : "jpg";
+      const fileName = `${Date.now()}.${extension}`;
+      const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
+      const uploadUri =
+        mediaType === "video" || imageOptions?.skipProcessing
+          ? uri
+          : await prepareImageForUpload(uri, imageOptions);
 
-    let fileBody: Blob | ArrayBuffer;
+      let fileBody: Blob | ArrayBuffer;
 
-    if (Platform.OS === "web") {
-      const response = await fetch(uploadUri);
-      fileBody = await response.blob();
-    } else {
-      const base64 = await FileSystem.readAsStringAsync(uploadUri, {
-        encoding: "base64",
+      if (Platform.OS === "web") {
+        const response = await fetch(uploadUri);
+        fileBody = await response.blob();
+      } else {
+        const base64 = await FileSystem.readAsStringAsync(uploadUri, {
+          encoding: "base64",
+        });
+
+        fileBody = decode(base64);
+      }
+
+      const { error } = await supabase.storage
+        .from("images")
+        .upload(fileName, fileBody, {
+          contentType,
+          upsert: false,
+        });
+
+      if (error) {
+        devLog("[media] supabase upload error", error);
+        alert(JSON.stringify(error));
+        return null;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("images")
+        .getPublicUrl(fileName);
+      countUsage("storage-public-url-created", fileName);
+
+      devLog("[media] uploaded media to Supabase", {
+        mediaType,
+        fileName,
       });
 
-      fileBody = decode(base64);
-    }
+      const publicUrl = normalizeMediaUri(publicUrlData.publicUrl);
 
-    const { error } = await supabase.storage
-      .from("images")
-      .upload(fileName, fileBody, {
-        contentType,
-        upsert: false,
-      });
+      if (!publicUrl) {
+        devLog("[media] Supabase returned invalid public URL", publicUrlData.publicUrl);
+        return null;
+      }
 
-    if (error) {
-      devLog("[media] supabase upload error", error);
-      alert(JSON.stringify(error));
+      return publicUrl;
+    } catch (error: any) {
+      devLog("[media] upload media error", error);
+      alert(error.message || "Media upload failed.");
       return null;
     }
-
-    const { data: publicUrlData } = supabase.storage
-      .from("images")
-      .getPublicUrl(fileName);
-    countUsage("storage-public-url-created", fileName);
-
-    devLog("[media] uploaded media to Supabase", {
-      mediaType,
-      fileName,
-    });
-
-    const publicUrl = normalizeMediaUri(publicUrlData.publicUrl);
-
-    if (!publicUrl) {
-      devLog("[media] Supabase returned invalid public URL", publicUrlData.publicUrl);
-      return null;
-    }
-
-    return publicUrl;
-  } catch (error: any) {
-    devLog("[media] upload media error", error);
-    alert(error.message || "Media upload failed.");
-    return null;
   }
-}
+
+  async function createWebVideoThumbnailUri(uri: string, timeMs: number) {
+    const videoBlob = await fetch(uri).then((response) => response.blob());
+    const objectUrl = URL.createObjectURL(videoBlob);
+
+    try {
+      const video = document.createElement("video");
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = "metadata";
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(
+          () => reject(new Error("Timed out loading video metadata")),
+          10000
+        );
+
+        video.onloadedmetadata = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Unable to load video metadata"));
+        };
+        video.src = objectUrl;
+        video.load();
+      });
+
+      const durationSeconds = Number.isFinite(video.duration) ? video.duration : 0;
+      const targetSeconds = Math.min(timeMs / 1000, Math.max(0, durationSeconds - 0.05));
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(
+          () => reject(new Error("Timed out seeking video thumbnail frame")),
+          10000
+        );
+
+        video.onseeked = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        video.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Unable to seek video thumbnail frame"));
+        };
+        video.currentTime = targetSeconds;
+
+        if (targetSeconds === 0 && video.readyState >= 2) {
+          window.clearTimeout(timeout);
+          resolve();
+        }
+      });
+
+      const sourceWidth = video.videoWidth || 640;
+      const sourceHeight = video.videoHeight || 360;
+      const width = 640;
+      const height = Math.max(1, Math.round((sourceHeight / sourceWidth) * width));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Unable to create thumbnail canvas context");
+
+      context.drawImage(video, 0, 0, width, height);
+
+      return canvas.toDataURL("image/jpeg", 0.58);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  async function createVideoThumbnailUri(uri: string, durationMs?: number) {
+    const candidateTimes = Array.from(
+      new Set(
+        [
+          durationMs ? Math.max(0, Math.min(1000, Math.floor(durationMs / 2))) : 1000,
+          500,
+          0,
+        ].filter((time) => time >= 0)
+      )
+    );
+
+    for (const time of candidateTimes) {
+      try {
+        if (Platform.OS === "web") {
+          const thumbnailUri = await createWebVideoThumbnailUri(uri, time);
+
+          devLog("[media] generated web video thumbnail", {
+            videoUri: uri,
+            thumbnailPreview: thumbnailUri.slice(0, 48),
+            time,
+          });
+
+          return thumbnailUri;
+        }
+
+        const thumbnail = await VideoThumbnails.getThumbnailAsync(uri, {
+          time,
+          quality: 0.7,
+        });
+
+        devLog("[media] generated video thumbnail", {
+          videoUri: uri,
+          thumbnailUri: thumbnail.uri,
+          width: thumbnail.width,
+          height: thumbnail.height,
+          time,
+        });
+
+        return thumbnail.uri;
+      } catch (error) {
+        devLog("[media] failed to generate video thumbnail candidate", {
+          time,
+          error,
+        });
+      }
+    }
+
+    devLog("[media] failed to generate video thumbnail for all candidates", uri);
+    return "";
+  }
 
   function loadMoreFeedPosts() {
     if (!hasMorePosts || feedLoadingMoreRef.current) return;
@@ -777,6 +1441,9 @@ export default function App() {
         username: cleanedUsername,
         bio: newBio.trim(),
         photoUrl: uploadedPhotoUrl,
+        followerCount,
+        followingCount,
+        following: currentFollowingIds,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
@@ -787,6 +1454,129 @@ export default function App() {
     setPhotoUrl(uploadedPhotoUrl);
 
     alert("Profile saved!");
+  }
+
+  async function enableNotifications(
+    preferences: NotificationPreferences = notificationPreferences
+  ) {
+    if (!currentUser) return false;
+
+    if (Platform.OS === "web") {
+      await setDoc(
+        doc(db, "users", currentUser.uid),
+        {
+          notificationPreferences: preferences,
+          notificationsEnabled: false,
+          notificationStatus: "web-unavailable",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      alert("Notification preferences saved. Push alerts are available in the mobile build.");
+      return false;
+    }
+
+    try {
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("default", {
+          name: "CityPeak",
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
+      }
+
+      const existingPermissions = await Notifications.getPermissionsAsync();
+      const finalPermissions = existingPermissions.granted
+        ? existingPermissions
+        : await Notifications.requestPermissionsAsync();
+
+      if (!finalPermissions.granted) {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          {
+            notificationPreferences: preferences,
+            notificationsEnabled: false,
+            notificationStatus: "declined",
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        return false;
+      }
+
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        Constants.easConfig?.projectId;
+      const tokenResponse = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
+
+      await setDoc(
+        doc(db, "users", currentUser.uid),
+        {
+          expoPushToken: tokenResponse.data,
+          notificationPreferences: preferences,
+          notificationsEnabled: true,
+          notificationStatus: "enabled",
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      setExpoPushToken(tokenResponse.data);
+      setNotificationsEnabled(true);
+      setNotificationPreferences(preferences);
+      return true;
+    } catch (error: any) {
+      devLog("[notifications] enable failed", error);
+      alert(error.message || "Notifications could not be enabled yet.");
+      return false;
+    }
+  }
+
+  async function completeOnboarding(settings: {
+    area: string;
+    interests: string[];
+    notificationPreferences: NotificationPreferences;
+  }) {
+    if (!currentUser) return;
+
+    const nextArea = settings.area.trim() || selectedArea;
+
+    await setDoc(
+      doc(db, "users", currentUser.uid),
+      {
+        hasCompletedOnboarding: true,
+        selectedArea: nextArea,
+        interests: settings.interests,
+        notificationPreferences: settings.notificationPreferences,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    setSelectedArea(nextArea);
+    setNotificationPreferences(settings.notificationPreferences);
+    setHasCompletedOnboarding(true);
+  }
+
+  async function toggleNotificationPreference(key: keyof NotificationPreferences) {
+    if (!currentUser) return;
+
+    const nextPreferences = {
+      ...notificationPreferences,
+      [key]: !notificationPreferences[key],
+    };
+
+    setNotificationPreferences(nextPreferences);
+
+    await setDoc(
+      doc(db, "users", currentUser.uid),
+      {
+        notificationPreferences: nextPreferences,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
   }
 
   async function addPost(
@@ -823,7 +1613,7 @@ export default function App() {
         alert(
           mediaKind === "tutorial"
             ? "Tutorial videos can be up to 10 minutes."
-            : "Regular post videos can be up to 60 seconds."
+            : "Regular post videos can be up to 30 seconds."
         );
         return;
       }
@@ -847,19 +1637,47 @@ export default function App() {
     setTab("feed");
 
     let uploadedMediaUrl = "";
+    let uploadedThumbnailUrl = "";
 
     try {
       if (mediaUri) {
-  const result = await uploadMediaToSupabase(mediaUri, mediaType);
+        if (mediaType === "video") {
+          setPostingStatus("🖼️ Preparing video thumbnail...");
+          const thumbnailUri = await createVideoThumbnailUri(mediaUri, mediaDurationMs);
 
-  if (!result) {
-    setPostingStatus("");
-    alert("Media upload failed. Please try again.");
-    return;
-  }
+          if (!thumbnailUri) {
+            setPostingStatus("");
+            alert("We couldn't create a video thumbnail. Please choose another video.");
+            return;
+          }
 
-  uploadedMediaUrl = result;
-}
+          const thumbnailResult = await uploadMediaToSupabase(thumbnailUri, "image", {
+            width: 640,
+            compress: 0.54,
+            skipProcessing:
+              Platform.OS === "web" && thumbnailUri.startsWith("data:image/"),
+          });
+
+          if (!thumbnailResult) {
+            setPostingStatus("");
+            alert("Video thumbnail upload failed. Please try again.");
+            return;
+          }
+
+          uploadedThumbnailUrl = thumbnailResult;
+          setPostingStatus("🎥 Uploading compressed video...");
+        }
+
+        const result = await uploadMediaToSupabase(mediaUri, mediaType);
+
+        if (!result) {
+          setPostingStatus("");
+          alert("Media upload failed. Please try again.");
+          return;
+        }
+
+        uploadedMediaUrl = result;
+      }
 
       const postCoordinates = userCoordinates || (await getCurrentCoordinates());
 
@@ -883,7 +1701,7 @@ export default function App() {
         postCoordinates,
         expiresAt: expiresAt || null,
         imageUri: uploadedMediaUrl,
-        imageThumbnailUri: mediaType === "image" ? uploadedMediaUrl : "",
+        imageThumbnailUri: mediaType === "image" ? uploadedMediaUrl : uploadedThumbnailUrl,
         mediaType: mediaType || "",
         mediaKind: mediaKind || "post",
         mediaDurationMs: mediaDurationMs || null,
@@ -987,6 +1805,41 @@ export default function App() {
     await updateDoc(doc(db, "posts", postId), {
       "poll.options": nextOptions,
       [`poll.votedBy.${currentUser.uid}`]: optionId,
+    });
+  }
+
+  async function addPollToPost(
+    postId: string,
+    poll: PollDraft
+  ) {
+    if (!currentUser) return;
+
+    const targetPost = posts.find((post) => post.id === postId);
+    if (!targetPost) return;
+
+    if (targetPost.poll) {
+      alert("This post already has a poll.");
+      return;
+    }
+
+    const cleanedQuestion = poll.question.trim();
+    const cleanedOptions = poll.options.map((option) => option.trim()).filter(Boolean);
+
+    if (!cleanedQuestion || cleanedOptions.length < 2) {
+      alert("Add a poll question and at least two options.");
+      return;
+    }
+
+    await updateDoc(doc(db, "posts", postId), {
+      poll: {
+        question: cleanedQuestion,
+        options: cleanedOptions.map((option, index) => ({
+          id: `${Date.now()}-${index}`,
+          text: option,
+          votes: 0,
+        })),
+        votedBy: {},
+      },
     });
   }
 
@@ -1380,6 +2233,11 @@ export default function App() {
       return;
     }
 
+    if (blockedUserIds.includes(post.uid)) {
+      alert("Unblock this user before messaging them.");
+      return;
+    }
+
     setStartingMessageUserId(post.uid);
     setTab("messages");
   }
@@ -1387,21 +2245,113 @@ export default function App() {
   async function handleLogout() {
     await signOut(auth);
   }
+
+  async function cleanupAccountData(userId: string) {
+    const [
+      userPostsSnapshot,
+      userMessagesSnapshot,
+      reportedBySnapshot,
+      postOwnerReportsSnapshot,
+      commentOwnerReportsSnapshot,
+      followingRefsSnapshot,
+      followerRefsSnapshot,
+    ] = await Promise.all([
+      getDocs(query(collection(db, "posts"), where("uid", "==", userId))),
+      getDocs(
+        query(collection(db, "messages"), where("participants", "array-contains", userId))
+      ),
+      getDocs(query(collection(db, "reports"), where("reportedByUid", "==", userId))),
+      getDocs(query(collection(db, "reports"), where("postOwnerUid", "==", userId))),
+      getDocs(query(collection(db, "reports"), where("commentOwnerUid", "==", userId))),
+      getDocs(query(collection(db, "users"), where("following", "array-contains", userId))),
+      getDocs(query(collection(db, "users"), where("followers", "array-contains", userId))),
+    ]);
+
+    const batches: ReturnType<typeof writeBatch>[] = [];
+    let batch = writeBatch(db);
+    let operationCount = 0;
+
+    function queue(operation: (activeBatch: typeof batch) => void) {
+      if (operationCount >= 440) {
+        batches.push(batch);
+        batch = writeBatch(db);
+        operationCount = 0;
+      }
+
+      operation(batch);
+      operationCount += 1;
+    }
+
+    followingRefsSnapshot.docs.forEach((userDoc) => {
+      if (userDoc.id === userId) return;
+
+      queue((activeBatch) =>
+        activeBatch.update(userDoc.ref, {
+          following: arrayRemove(userId),
+          followingCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    followerRefsSnapshot.docs.forEach((userDoc) => {
+      if (userDoc.id === userId) return;
+
+      queue((activeBatch) =>
+        activeBatch.update(userDoc.ref, {
+          followers: arrayRemove(userId),
+          followerCount: increment(-1),
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+
+    userPostsSnapshot.docs.forEach((postDoc) => {
+      queue((activeBatch) => activeBatch.delete(postDoc.ref));
+    });
+
+    userMessagesSnapshot.docs.forEach((messageDoc) => {
+      queue((activeBatch) => activeBatch.delete(messageDoc.ref));
+    });
+
+    const reportDocs = new Map<string, (typeof reportedBySnapshot.docs)[number]>();
+
+    [
+      ...reportedBySnapshot.docs,
+      ...postOwnerReportsSnapshot.docs,
+      ...commentOwnerReportsSnapshot.docs,
+    ].forEach((reportDoc) => {
+      reportDocs.set(reportDoc.id, reportDoc);
+    });
+
+    reportDocs.forEach((reportDoc) => {
+      queue((activeBatch) => activeBatch.delete(reportDoc.ref));
+    });
+
+    queue((activeBatch) => activeBatch.delete(doc(db, "users", userId)));
+
+    batches.push(batch);
+    await Promise.all(batches.map((queuedBatch) => queuedBatch.commit()));
+  }
+
   async function deleteAccount() {
     if (!currentUser) return;
 
     const confirmed = confirm(
-      "Are you sure you want to permanently delete your CityPeak account?"
+      "Delete your CityPeak account? Your profile, posts, messages, reports, and follow links will be cleaned up. This cannot be undone."
     );
 
     if (!confirmed) return;
 
     try {
-      await deleteDoc(doc(db, "users", currentUser.uid));
+      setPostingStatus("Cleaning up your account...");
+      await cleanupAccountData(currentUser.uid);
       await deleteUser(currentUser);
+      setPostingStatus("");
 
       alert("Account deleted.");
     } catch (error: any) {
+      setPostingStatus("");
       alert(
         error.message ||
         "Please log out and back in before deleting your account."
@@ -1413,11 +2363,19 @@ export default function App() {
     return getPostStats(profilePosts);
   }, [profilePosts]);
 
+  const visiblePosts = useMemo(() => {
+    return posts.filter((post) => !post.uid || !blockedUserIds.includes(post.uid));
+  }, [posts, blockedUserIds]);
+
+  const visibleProfilePosts = useMemo(() => {
+    return profilePosts.filter((post) => !post.uid || !blockedUserIds.includes(post.uid));
+  }, [profilePosts, blockedUserIds]);
+
   const savedPosts = useMemo(() => {
     if (!currentUser?.uid) return [];
 
-    return posts.filter((post) => !!post.savedBy?.[currentUser.uid]);
-  }, [posts, currentUser?.uid]);
+    return visiblePosts.filter((post) => !!post.savedBy?.[currentUser.uid]);
+  }, [visiblePosts, currentUser?.uid]);
 
   async function openUserProfile(target: UserProfileTarget) {
     if (!target.uid) return;
@@ -1470,6 +2428,10 @@ export default function App() {
         email: userData.email,
         bio: userData.bio || "",
         photoUrl: userData.photoUrl || target.photoUrl || "",
+        followerCount: Math.max(0, userData.followerCount || 0),
+        followingCount: Math.max(0, userData.followingCount || 0),
+        followers: Array.isArray(userData.followers) ? userData.followers : [],
+        following: Array.isArray(userData.following) ? userData.following : [],
         stats: getPostStats(loadedPosts),
       };
 
@@ -1483,12 +2445,137 @@ export default function App() {
     }
   }
 
+  async function toggleFollowUser(profile: PublicUserProfile) {
+    if (!currentUser) return;
+
+    if (profile.uid === currentUser.uid) {
+      setSelectedUserProfile(null);
+      setTab("profile");
+      return;
+    }
+
+    const alreadyFollowing = currentFollowingIds.includes(profile.uid);
+    const nextFollowerCount = Math.max(
+      0,
+      (profile.followerCount || 0) + (alreadyFollowing ? -1 : 1)
+    );
+
+    try {
+      setFollowBusyUid(profile.uid);
+
+      await Promise.all([
+        updateDoc(doc(db, "users", currentUser.uid), {
+          following: alreadyFollowing
+            ? arrayRemove(profile.uid)
+            : arrayUnion(profile.uid),
+          followingCount: increment(alreadyFollowing ? -1 : 1),
+          updatedAt: serverTimestamp(),
+        }),
+        updateDoc(doc(db, "users", profile.uid), {
+          followers: alreadyFollowing
+            ? arrayRemove(currentUser.uid)
+            : arrayUnion(currentUser.uid),
+          followerCount: increment(alreadyFollowing ? -1 : 1),
+          updatedAt: serverTimestamp(),
+        }),
+      ]);
+
+      const updatedProfile = {
+        ...profile,
+        followerCount: nextFollowerCount,
+        followers: alreadyFollowing
+          ? (profile.followers || []).filter((uid) => uid !== currentUser.uid)
+          : Array.from(new Set([...(profile.followers || []), currentUser.uid])),
+      };
+
+      setSelectedUserProfile(updatedProfile);
+      publicProfileCacheRef.current.set(profile.uid, {
+        profile: updatedProfile,
+        loadedAt: Date.now(),
+      });
+      setCurrentFollowingIds((ids) =>
+        alreadyFollowing
+          ? ids.filter((uid) => uid !== profile.uid)
+          : Array.from(new Set([...ids, profile.uid]))
+      );
+      setFollowingCount((count) => Math.max(0, count + (alreadyFollowing ? -1 : 1)));
+    } catch (error: any) {
+      devLog("[profile] follow toggle failed", error);
+      alert(error.message || "Follow update failed. Please try again.");
+    } finally {
+      setFollowBusyUid(null);
+    }
+  }
+
+  async function toggleBlockUser(profile: PublicUserProfile) {
+    if (!currentUser) return;
+    if (profile.uid === currentUser.uid) return;
+
+    const alreadyBlocked = blockedUserIds.includes(profile.uid);
+    const confirmed =
+      alreadyBlocked ||
+      confirm(
+        `Block @${profile.username}? Their posts and messages will be hidden from your CityPeak experience.`
+      );
+
+    if (!confirmed) return;
+
+    try {
+      setBlockBusyUid(profile.uid);
+      const wasFollowing = currentFollowingIds.includes(profile.uid);
+      const currentUserUpdates: any = {
+        blockedUserIds: alreadyBlocked
+          ? arrayRemove(profile.uid)
+          : arrayUnion(profile.uid),
+        updatedAt: serverTimestamp(),
+      };
+      const targetUserUpdates: any = {
+        updatedAt: serverTimestamp(),
+      };
+
+      if (!alreadyBlocked && wasFollowing) {
+        currentUserUpdates.following = arrayRemove(profile.uid);
+        currentUserUpdates.followingCount = increment(-1);
+        targetUserUpdates.followers = arrayRemove(currentUser.uid);
+        targetUserUpdates.followerCount = increment(-1);
+      }
+
+      await Promise.all([
+        updateDoc(doc(db, "users", currentUser.uid), currentUserUpdates),
+        updateDoc(doc(db, "users", profile.uid), targetUserUpdates),
+      ]);
+
+      setBlockedUserIds((ids) =>
+        alreadyBlocked
+          ? ids.filter((uid) => uid !== profile.uid)
+          : Array.from(new Set([...ids, profile.uid]))
+      );
+
+      if (!alreadyBlocked) {
+        setCurrentFollowingIds((ids) => ids.filter((uid) => uid !== profile.uid));
+        setFollowingCount((count) =>
+          wasFollowing ? Math.max(0, count - 1) : count
+        );
+      }
+    } catch (error: any) {
+      devLog("[profile] block toggle failed", error);
+      alert(error.message || "Block update failed. Please try again.");
+    } finally {
+      setBlockBusyUid(null);
+    }
+  }
+
   function messageUserFromProfile(profile: PublicUserProfile) {
     if (!currentUser) return;
 
     if (profile.uid === currentUser.uid) {
       setSelectedUserProfile(null);
       setTab("profile");
+      return;
+    }
+
+    if (blockedUserIds.includes(profile.uid)) {
+      alert("Unblock this user before messaging them.");
       return;
     }
 
@@ -1500,6 +2587,7 @@ export default function App() {
   if (!firebaseReady) {
     return (
       <SafeAreaView style={styles.container}>
+        <CityBackdrop />
         <View style={styles.screen}>
           <Text style={styles.logo}>CityPeak</Text>
           <Text style={styles.subtitle}>Connecting Firebase...</Text>
@@ -1512,8 +2600,20 @@ export default function App() {
     return <AuthScreen onAuthSuccess={() => { }} />;
   }
 
+  if (!hasCompletedOnboarding) {
+    return (
+      <OnboardingScreen
+        initialArea={selectedArea}
+        notificationPreferences={notificationPreferences}
+        onComplete={completeOnboarding}
+        onEnableNotifications={enableNotifications}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
+      <CityBackdrop />
       <View style={styles.header}>
         <View style={styles.headerTitleArea}>
           <Text style={styles.logo}>CityPeak</Text>
@@ -1542,9 +2642,9 @@ export default function App() {
           style={{
             marginHorizontal: 20,
             marginBottom: 12,
-            backgroundColor: "#0F172A",
+            backgroundColor: "rgba(15, 23, 42, 0.34)",
             borderWidth: 1,
-            borderColor: "#2563EB",
+            borderColor: "rgba(96, 165, 250, 0.42)",
             borderRadius: 18,
             padding: 12,
           }}
@@ -1574,7 +2674,7 @@ export default function App() {
 
       {tab === "feed" && (
         <FeedScreen
-          posts={posts}
+          posts={visiblePosts}
           hasMorePosts={hasMorePosts}
           onLoadMorePosts={loadMoreFeedPosts}
           onRefreshPosts={refreshFeedPosts}
@@ -1601,7 +2701,7 @@ export default function App() {
           setSearch={setSearch}
           setSelectedArea={setSelectedArea}
           setTab={setTab}
-          posts={posts}
+          posts={visiblePosts}
         />
       )}
 
@@ -1660,7 +2760,7 @@ export default function App() {
                       height: 220,
                       borderRadius: 16,
                       marginTop: 12,
-                      backgroundColor: "#0F172A",
+                      backgroundColor: "rgba(15, 23, 42, 0.30)",
                     }}
                     onLoad={() => devLog("[media] loaded report image", report.imageUri)}
                     onError={() => devLog("[media] failed report image", report.imageUri)}
@@ -1703,8 +2803,18 @@ export default function App() {
             photoUrl={photoUrl}
             email={currentUser.email}
             stats={profileStats}
-            posts={profilePosts}
+            followerCount={followerCount}
+            followingCount={followingCount}
+            followingUsers={followingUsers}
+            notificationsEnabled={notificationsEnabled}
+            notificationPreferences={notificationPreferences}
+            posts={visibleProfilePosts}
             savedPosts={savedPosts}
+            onOpenFollowingUser={(user) => openUserProfile(user)}
+            onEnableNotifications={async () => {
+              await enableNotifications(notificationPreferences);
+            }}
+            onToggleNotificationPreference={toggleNotificationPreference}
             onSaveProfile={saveProfile}
             onUpdatePost={updatePostDetails}
             onOpenPost={openPostWithView}
@@ -1732,17 +2842,30 @@ export default function App() {
         onDeletePost={deletePost}
         onReportPost={reportPost}
         onReportComment={reportComment}
-        onDeleteComment={deleteComment}
-        onDislikeComment={dislikeComment}
-        onVotePoll={voteOnPoll}
-        userCoordinates={userCoordinates}
-        onOpenUserProfile={openUserProfile}
-      />
+          onDeleteComment={deleteComment}
+          onDislikeComment={dislikeComment}
+          onVotePoll={voteOnPoll}
+          onAddPollToPost={addPollToPost}
+          userCoordinates={userCoordinates}
+          onOpenUserProfile={openUserProfile}
+        />
       <PublicUserProfileModal
         profile={selectedUserProfile}
         currentUserId={currentUser?.uid}
+        isFollowing={
+          !!selectedUserProfile &&
+          currentFollowingIds.includes(selectedUserProfile.uid)
+        }
+        followBusy={followBusyUid === selectedUserProfile?.uid}
+        isBlocked={
+          !!selectedUserProfile &&
+          blockedUserIds.includes(selectedUserProfile.uid)
+        }
+        blockBusy={blockBusyUid === selectedUserProfile?.uid}
         onClose={() => setSelectedUserProfile(null)}
         onMessage={messageUserFromProfile}
+        onToggleFollow={toggleFollowUser}
+        onToggleBlock={toggleBlockUser}
       />
     </SafeAreaView>
   );

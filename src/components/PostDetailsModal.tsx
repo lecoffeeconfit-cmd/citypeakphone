@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { PollCard } from "./PollCard";
 import { styles } from "../styles";
-import type { Coordinates, Post, ReactionKey } from "../types";
+import type { Coordinates, PollDraft, Post, ReactionKey } from "../types";
 import { formatDistanceAway } from "../utils/distance";
 import { formatExpirationLabel, getExpirationTimestamp } from "../utils/expiration";
 import { devLog, getStableImageSource } from "../utils/media";
@@ -23,6 +23,7 @@ type PostDetailsModalProps = {
   onReportComment?: (postId: string, commentId: string, reason: string) => void;
   onDeleteComment?: (postId: string, commentId: string) => void;
   onVotePoll?: (postId: string, optionId: string) => void;
+  onAddPollToPost?: (postId: string, poll: PollDraft) => Promise<void> | void;
   userCoordinates?: Coordinates | null;
   onOpenUserProfile?: (target: {
     uid?: string;
@@ -41,6 +42,7 @@ export function PostDetailsModal({
   onAddReply,
   currentUserId,
   onVotePoll,
+  onAddPollToPost,
   userCoordinates,
   onOpenUserProfile,
 }: PostDetailsModalProps) {
@@ -49,9 +51,15 @@ export function PostDetailsModal({
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   const [localPost, setLocalPost] = useState<Post | null>(post);
   const [imagePreviewUri, setImagePreviewUri] = useState<string | null>(null);
+  const [showPollComposer, setShowPollComposer] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
 
   useEffect(() => {
     setLocalPost(post);
+    setShowPollComposer(false);
+    setPollQuestion("");
+    setPollOptions(["", ""]);
   }, [post]);
 
   if (!localPost) return null;
@@ -63,13 +71,35 @@ export function PostDetailsModal({
     !!localPost.expiresAt && (getExpirationTimestamp(localPost.expiresAt) ?? 0) < Date.now();
   const postFieldRows = getPostFieldRows(localPost.postFields);
   const detailImageSource = getStableImageSource(
-    localPost.imageThumbnailUri || localPost.imageUri,
+    localPost.mediaType === "video"
+      ? undefined
+      : localPost.imageThumbnailUri || localPost.imageUri,
     `post ${localPost.id} detail image`
   );
   const previewImageSource = getStableImageSource(
     imagePreviewUri,
     `post ${localPost.id} preview image`
   );
+  const canAddPoll = !!currentUserId && !localPost.poll;
+
+  async function handleAddPoll() {
+    const cleanedQuestion = pollQuestion.trim();
+    const cleanedOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
+
+    if (!cleanedQuestion || cleanedOptions.length < 2) {
+      alert("Add a poll question and at least two options.");
+      return;
+    }
+
+    await onAddPollToPost?.(activePost.id, {
+      question: cleanedQuestion,
+      options: cleanedOptions,
+    });
+
+    setShowPollComposer(false);
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+  }
 
   function openPostAuthorProfile() {
     if (!activePost.uid) return;
@@ -419,6 +449,100 @@ export function PostDetailsModal({
                   onVote={(optionId) => onVotePoll?.(localPost.id, optionId)}
                 />
               )}
+
+              {!localPost.poll && (
+                <View style={styles.pollComposerCard}>
+                  <View style={styles.pollComposerHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pollComposerTitle}>Add a poll</Text>
+                      <Text style={styles.switchHelp}>
+                        Let people vote on this post.
+                      </Text>
+                    </View>
+
+                    {canAddPoll ? (
+                      <Pressable
+                        style={[
+                          styles.pollToggleButton,
+                          showPollComposer && styles.pollToggleButtonActive,
+                        ]}
+                        onPress={() => setShowPollComposer((current) => !current)}
+                      >
+                        <Text
+                          style={[
+                            styles.pollToggleText,
+                            showPollComposer && styles.pollToggleTextActive,
+                          ]}
+                        >
+                          {showPollComposer ? "Hide" : "Create"}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <View style={styles.pollRequiredBadge}>
+                        <Text style={styles.pollRequiredBadgeText}>Sign in</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {showPollComposer && canAddPoll && (
+                    <View style={{ marginTop: 14, gap: 10 }}>
+                      <TextInput
+                        style={styles.pollInput}
+                        placeholder="Poll question"
+                        placeholderTextColor="#64748B"
+                        value={pollQuestion}
+                        onChangeText={setPollQuestion}
+                      />
+
+                      {pollOptions.map((option, index) => (
+                        <TextInput
+                          key={index}
+                          style={styles.pollInput}
+                          placeholder={`Option ${index + 1}`}
+                          placeholderTextColor="#64748B"
+                          value={option}
+                          onChangeText={(value) => {
+                            setPollOptions((currentOptions) =>
+                              currentOptions.map((currentOption, optionIndex) =>
+                                optionIndex === index ? value : currentOption
+                              )
+                            );
+                          }}
+                        />
+                      ))}
+
+                      <View style={{ flexDirection: "row", gap: 10 }}>
+                        {pollOptions.length < 4 && (
+                          <Pressable
+                            style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
+                            onPress={() => setPollOptions((options) => [...options, ""])}
+                          >
+                            <Text style={styles.secondaryButtonText}>Add option</Text>
+                          </Pressable>
+                        )}
+
+                        {pollOptions.length > 2 && (
+                          <Pressable
+                            style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
+                            onPress={() =>
+                              setPollOptions((options) =>
+                                options.slice(0, options.length - 1)
+                              )
+                            }
+                          >
+                            <Text style={styles.secondaryButtonText}>Remove</Text>
+                          </Pressable>
+                        )}
+                      </View>
+
+                      <Pressable style={styles.primaryButton} onPress={handleAddPoll}>
+                        <Text style={styles.primaryButtonText}>Create Poll</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {!!detailImageSource && localPost.mediaType !== "video" && (
                 <Pressable
                   onPress={() => {
@@ -434,7 +558,7 @@ export function PostDetailsModal({
                       height: 300,
                       borderRadius: 16,
                       marginTop: 12,
-                      backgroundColor: "#0F172A",
+                      backgroundColor: "rgba(15, 23, 42, 0.30)",
                     }}
                     resizeMode="cover"
                     onLoad={() => devLog("[media] loaded post detail image", localPost.imageThumbnailUri || localPost.imageUri)}
@@ -494,7 +618,9 @@ export function PostDetailsModal({
               top: 50,
               right: 24,
               zIndex: 10,
-              backgroundColor: "#111827",
+              backgroundColor: "rgba(17, 24, 39, 0.78)",
+              borderWidth: 1,
+              borderColor: "rgba(148, 163, 184, 0.24)",
               borderRadius: 999,
               paddingHorizontal: 14,
               paddingVertical: 8,

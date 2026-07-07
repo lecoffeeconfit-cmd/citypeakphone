@@ -32,6 +32,13 @@
     "plugins": [
       "expo-video",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#329BB8"
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow CityPeak to show how close local posts are to you."

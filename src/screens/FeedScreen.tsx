@@ -55,6 +55,23 @@ const categoryColors: Record<string, string> = {
   Events: "#86B5CF",
 };
 
+function hexToRgba(hex: string, alpha: number) {
+  const normalizedHex = hex.replace("#", "");
+  const red = parseInt(normalizedHex.slice(0, 2), 16);
+  const green = parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = parseInt(normalizedHex.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function getCategoryTextColor(color: string, active: boolean) {
+  if (active && (color === "#F8B400" || color === "#86B5CF")) {
+    return "#062033";
+  }
+
+  return "#FFFFFF";
+}
+
 function getTrendingScore(post: Post) {
   const reactionScore =
     post.reactions.fire +
@@ -177,10 +194,10 @@ export function FeedScreen({
               placeholder="Search posts in this city..."
               placeholderTextColor="#64748B"
               style={{
-                backgroundColor: "#0F172A",
+                backgroundColor: "rgba(15, 23, 42, 0.30)",
                 color: "white",
                 borderWidth: 1,
-                borderColor: "#334155",
+                borderColor: "rgba(186, 230, 253, 0.25)",
                 borderRadius: 16,
                 padding: 12,
                 marginBottom: 16,
@@ -212,10 +229,17 @@ export function FeedScreen({
                         style={[
                           styles.feedCategoryCard,
                           {
-                            backgroundColor: color,
-                            borderColor: active ? "#FFFFFF" : color,
-                            borderWidth: active ? 3 : 1,
+                            backgroundColor: hexToRgba(color, active ? 0.74 : 0.34),
+                            borderColor: active
+                              ? "rgba(255, 255, 255, 0.86)"
+                              : hexToRgba(color, 0.54),
+                            borderWidth: active ? 2 : 1,
                             marginRight: 0,
+                            shadowColor: color,
+                            shadowOpacity: active ? 0.26 : 0.12,
+                            shadowRadius: active ? 16 : 10,
+                            shadowOffset: { width: 0, height: active ? 8 : 5 },
+                            elevation: active ? 5 : 2,
                           },
                         ]}
                       >
@@ -226,10 +250,7 @@ export function FeedScreen({
                           style={[
                             styles.feedCategoryText,
                             {
-                              color:
-                                color === "#F8B400" || color === "#86B5CF"
-                                  ? "#003B57"
-                                  : "#FFFFFF",
+                              color: getCategoryTextColor(color, active),
                             },
                           ]}
                         >
@@ -260,9 +281,16 @@ export function FeedScreen({
                         style={[
                           styles.feedCategoryCard,
                           {
-                            backgroundColor: color,
-                            borderColor: active ? "#FFFFFF" : color,
-                            borderWidth: active ? 3 : 1,
+                            backgroundColor: hexToRgba(color, active ? 0.74 : 0.34),
+                            borderColor: active
+                              ? "rgba(255, 255, 255, 0.86)"
+                              : hexToRgba(color, 0.54),
+                            borderWidth: active ? 2 : 1,
+                            shadowColor: color,
+                            shadowOpacity: active ? 0.26 : 0.12,
+                            shadowRadius: active ? 16 : 10,
+                            shadowOffset: { width: 0, height: active ? 8 : 5 },
+                            elevation: active ? 5 : 2,
                           },
                         ]}
                       >
@@ -273,10 +301,7 @@ export function FeedScreen({
                           style={[
                             styles.feedCategoryText,
                             {
-                              color:
-                                color === "#F8B400" || color === "#86B5CF"
-                                  ? "#003B57"
-                                  : "#FFFFFF",
+                              color: getCategoryTextColor(color, active),
                             },
                           ]}
                         >
@@ -290,8 +315,16 @@ export function FeedScreen({
             </View>
 
             <View style={styles.feedHeroBanner}>
-              <View style={styles.heroCircleYellow} />
-              <View style={styles.heroCircleOrange} />
+              <View style={styles.heroMoonGlow} />
+              <View style={styles.heroMoon}>
+                <View style={styles.heroMoonCraterLarge} />
+                <View style={styles.heroMoonCraterSmall} />
+                <View style={styles.heroMoonCraterTiny} />
+              </View>
+              <View style={styles.heroMoonShadow} />
+              <View style={styles.heroSkyStarOne} />
+              <View style={styles.heroSkyStarTwo} />
+              <View style={styles.heroSkyStarThree} />
 
               <Text style={styles.feedHeroKicker}>CITYPEAK LOCAL</Text>
 

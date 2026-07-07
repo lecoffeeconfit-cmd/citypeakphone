@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Image,
+  KeyboardTypeOptions,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { styles } from "../styles";
@@ -8,10 +16,27 @@ import { postCategories } from "../types";
 import { getExpirationTimestamp, shouldSuggestExpiration } from "../utils/expiration";
 import { postTypeOptions } from "../utils/postTypes";
 
-const REGULAR_VIDEO_MAX_SECONDS = 60;
+const REGULAR_VIDEO_MAX_SECONDS = 30;
 const TUTORIAL_VIDEO_MAX_SECONDS = 10 * 60;
 const REGULAR_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
 const TUTORIAL_VIDEO_MAX_BYTES = 250 * 1024 * 1024;
+const LONG_TEXT_FIELD_KEYS = [
+  "description",
+  "details",
+  "whyRecommend",
+  "whySpecial",
+  "review",
+  "requirements",
+] as const;
+
+type PostFieldConfig = {
+  key: string;
+  label: string;
+  placeholder: string;
+  maxLength?: number;
+  keyboardType?: KeyboardTypeOptions;
+  multiline?: boolean;
+};
 
 type CreatePostScreenProps = {
   addPost: (
@@ -80,6 +105,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   const [mediaDurationMs, setMediaDurationMs] = useState<number | undefined>();
   const [mediaSizeBytes, setMediaSizeBytes] = useState<number | undefined>();
   const [category, setCategory] = useState<PostCategory | undefined>();
+  const [includePoll, setIncludePoll] = useState(false);
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [saleTitle, setSaleTitle] = useState("");
@@ -89,76 +115,77 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   const [tagsText, setTagsText] = useState("");
   const [postFields, setPostFields] = useState<PostFields>({});
   const [uploading, setUploading] = useState(false);
+  const wantsPoll = postType === "poll" || includePoll;
 
-  const fieldConfigs: Partial<Record<PostType, { key: string; label: string; placeholder?: string }[]>> = {
+  const fieldConfigs: Partial<Record<PostType, PostFieldConfig[]>> = {
     announcement: [
-      { key: "title", label: "Title" },
-      { key: "description", label: "Description" },
-      { key: "priority", label: "Priority", placeholder: "Low, Medium, High" },
-      { key: "attachments", label: "Attachments", placeholder: "Link or note" },
+      { key: "title", label: "Title", placeholder: "Road closure near Main St", maxLength: 80 },
+      { key: "description", label: "Description", placeholder: "What changed, who it affects, and when it ends", maxLength: 360, multiline: true },
+      { key: "priority", label: "Priority", placeholder: "Low, Medium, or High", maxLength: 20 },
+      { key: "attachments", label: "Attachments", placeholder: "Link, phone number, or short note", maxLength: 120 },
     ],
     question: [
-      { key: "question", label: "Question" },
-      { key: "details", label: "Details" },
-      { key: "solvedStatus", label: "Solved status", placeholder: "Open" },
-      { key: "bestAnswer", label: "Best answer", placeholder: "Add later if solved" },
+      { key: "question", label: "Question", placeholder: "Where can I find overnight parking downtown?", maxLength: 140 },
+      { key: "details", label: "Details", placeholder: "Add neighborhood, timing, or what you already tried", maxLength: 360, multiline: true },
+      { key: "solvedStatus", label: "Solved status", placeholder: "Open, answered, or still looking", maxLength: 28 },
+      { key: "bestAnswer", label: "Best answer", placeholder: "Add later if solved", maxLength: 220 },
     ],
     recommendation: [
-      { key: "name", label: "Name" },
-      { key: "recommendationCategory", label: "Category" },
-      { key: "rating", label: "Rating (1-5)" },
-      { key: "whyRecommend", label: "Why recommend" },
-      { key: "priceRange", label: "Price range", placeholder: "$, $$, $$$" },
+      { key: "name", label: "Name", placeholder: "Business, service, trail, or place", maxLength: 80 },
+      { key: "recommendationCategory", label: "Category", placeholder: "Coffee, mechanic, park, barber...", maxLength: 40 },
+      { key: "rating", label: "Rating (1-5)", placeholder: "4.5", maxLength: 3, keyboardType: "decimal-pad" },
+      { key: "whyRecommend", label: "Why recommend", placeholder: "What makes it worth trying?", maxLength: 360, multiline: true },
+      { key: "priceRange", label: "Price range", placeholder: "$, $$, $$$, or Free", maxLength: 12 },
     ],
     hiddenGem: [
-      { key: "name", label: "Name" },
-      { key: "gemLocation", label: "Location" },
-      { key: "description", label: "Description" },
-      { key: "whySpecial", label: "Why it's special" },
-      { key: "map", label: "Map", placeholder: "Map link or directions" },
+      { key: "name", label: "Name", placeholder: "Quiet overlook, tiny shop, shortcut...", maxLength: 80 },
+      { key: "gemLocation", label: "Location", placeholder: "Neighborhood, cross street, or landmark", maxLength: 100 },
+      { key: "description", label: "Description", placeholder: "What people should expect", maxLength: 320, multiline: true },
+      { key: "whySpecial", label: "Why it's special", placeholder: "The detail locals would care about", maxLength: 280, multiline: true },
+      { key: "map", label: "Map", placeholder: "Map link or simple directions", maxLength: 160, keyboardType: "url" },
     ],
     foodReview: [
-      { key: "restaurantName", label: "Restaurant name" },
-      { key: "cuisine", label: "Cuisine" },
-      { key: "rating", label: "Rating" },
-      { key: "priceRange", label: "Price range" },
-      { key: "favoriteItem", label: "Favorite item" },
-      { key: "review", label: "Review" },
+      { key: "restaurantName", label: "Restaurant name", placeholder: "Restaurant or food truck name", maxLength: 80 },
+      { key: "cuisine", label: "Cuisine", placeholder: "Tacos, Thai, bakery, burgers...", maxLength: 40 },
+      { key: "rating", label: "Rating", placeholder: "4.5", maxLength: 3, keyboardType: "decimal-pad" },
+      { key: "priceRange", label: "Price range", placeholder: "$, $$, $$$", maxLength: 12 },
+      { key: "favoriteItem", label: "Favorite item", placeholder: "The thing to order", maxLength: 80 },
+      { key: "review", label: "Review", placeholder: "Taste, service, wait, parking, vibe", maxLength: 420, multiline: true },
     ],
     alert: [
-      { key: "alertType", label: "Alert type" },
-      { key: "severity", label: "Severity", placeholder: "Low, Medium, High" },
-      { key: "description", label: "Description" },
-      { key: "alertLocation", label: "Location" },
-      { key: "status", label: "Status", placeholder: "Active or Resolved" },
+      { key: "alertType", label: "Alert type", placeholder: "Traffic, safety, weather, lost item...", maxLength: 48 },
+      { key: "severity", label: "Severity", placeholder: "Low, Medium, or High", maxLength: 20 },
+      { key: "description", label: "Description", placeholder: "What is happening and what to avoid", maxLength: 360, multiline: true },
+      { key: "alertLocation", label: "Location", placeholder: "Street, block, or nearby landmark", maxLength: 100 },
+      { key: "status", label: "Status", placeholder: "Active, resolved, or update needed", maxLength: 32 },
     ],
     event: [
-      { key: "eventName", label: "Event name" },
-      { key: "description", label: "Description" },
-      { key: "date", label: "Date" },
-      { key: "time", label: "Time" },
-      { key: "eventLocation", label: "Location" },
-      { key: "cost", label: "Cost" },
-      { key: "website", label: "Website" },
-      { key: "rsvpCount", label: "RSVP count" },
+      { key: "eventName", label: "Event name", placeholder: "Night market, cleanup, meetup...", maxLength: 90 },
+      { key: "description", label: "Description", placeholder: "What is happening and who should come", maxLength: 420, multiline: true },
+      { key: "date", label: "Date", placeholder: "YYYY-MM-DD", maxLength: 10, keyboardType: "numbers-and-punctuation" },
+      { key: "time", label: "Time", placeholder: "6:30 PM", maxLength: 18 },
+      { key: "eventLocation", label: "Location", placeholder: "Venue, park, cross street, or online", maxLength: 100 },
+      { key: "cost", label: "Cost", placeholder: "Free, $10, donation...", maxLength: 32 },
+      { key: "website", label: "Website", placeholder: "https://...", maxLength: 160, keyboardType: "url" },
+      { key: "rsvpCount", label: "RSVP count", placeholder: "20", maxLength: 6, keyboardType: "number-pad" },
     ],
     job: [
-      { key: "company", label: "Company" },
-      { key: "position", label: "Position" },
-      { key: "pay", label: "Pay" },
-      { key: "employmentType", label: "Employment type" },
-      { key: "jobLocation", label: "Location" },
-      { key: "requirements", label: "Requirements" },
-      { key: "applyLink", label: "Apply link" },
+      { key: "company", label: "Company", placeholder: "Business or organization", maxLength: 80 },
+      { key: "position", label: "Position", placeholder: "Barista, driver, designer...", maxLength: 80 },
+      { key: "pay", label: "Pay", placeholder: "$22/hr, salary range, or DOE", maxLength: 40 },
+      { key: "employmentType", label: "Employment type", placeholder: "Full-time, part-time, contract", maxLength: 40 },
+      { key: "jobLocation", label: "Location", placeholder: "On-site, hybrid, remote, neighborhood", maxLength: 80 },
+      { key: "requirements", label: "Requirements", placeholder: "Experience, schedule, license, or skills", maxLength: 420, multiline: true },
+      { key: "applyLink", label: "Apply link", placeholder: "https://...", maxLength: 160, keyboardType: "url" },
     ],
     volunteer: [
-      { key: "organization", label: "Organization" },
-      { key: "opportunity", label: "Opportunity" },
-      { key: "date", label: "Date" },
-      { key: "time", label: "Time" },
-      { key: "volunteerLocation", label: "Location" },
-      { key: "skillsNeeded", label: "Skills needed" },
-      { key: "spotsAvailable", label: "Spots available" },
+      { key: "organization", label: "Organization", placeholder: "Group or organizer", maxLength: 80 },
+      { key: "opportunity", label: "Opportunity", placeholder: "Food bank shift, cleanup, mentoring...", maxLength: 120 },
+      { key: "date", label: "Date", placeholder: "YYYY-MM-DD", maxLength: 10, keyboardType: "numbers-and-punctuation" },
+      { key: "time", label: "Time", placeholder: "9:00 AM - 12:00 PM", maxLength: 24 },
+      { key: "volunteerLocation", label: "Location", placeholder: "Meetup spot or address", maxLength: 100 },
+      { key: "skillsNeeded", label: "Skills needed", placeholder: "None, Spanish, lifting, tutoring...", maxLength: 160 },
+      { key: "spotsAvailable", label: "Spots available", placeholder: "12", maxLength: 6, keyboardType: "number-pad" },
     ],
   };
 
@@ -198,13 +225,19 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 0.72,
+      quality: mediaKind === "tutorial" ? 0.68 : 0.56,
       videoMaxDuration:
         mediaKind === "tutorial"
           ? TUTORIAL_VIDEO_MAX_SECONDS
           : REGULAR_VIDEO_MAX_SECONDS,
-      videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
-      videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+      videoExportPreset:
+        mediaKind === "tutorial"
+          ? ImagePicker.VideoExportPreset.H264_960x540
+          : ImagePicker.VideoExportPreset.H264_640x480,
+      videoQuality:
+        mediaKind === "tutorial"
+          ? ImagePicker.UIImagePickerControllerQualityType.IFrame960x540
+          : ImagePicker.UIImagePickerControllerQualityType.VGA640x480,
     });
 
     if (!result.canceled) {
@@ -225,7 +258,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
           alert(
             mediaKind === "tutorial"
               ? "Tutorial videos can be up to 10 minutes."
-              : "Regular post videos can be up to 60 seconds. Switch to Tutorial for longer videos."
+              : "Normal videos can be up to 30 seconds. Switch to Tutorial for longer videos."
           );
           return;
         }
@@ -265,17 +298,16 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
     const cleanedPollOptions = pollOptions
       .map((option) => option.trim())
       .filter(Boolean);
-    const isPollPost = postType === "poll";
     const isSalePost = postType === "sale";
     const pollDraft =
-      isPollPost && pollQuestion.trim() && cleanedPollOptions.length >= 2
+      wantsPoll && pollQuestion.trim() && cleanedPollOptions.length >= 2
         ? {
             question: pollQuestion.trim(),
             options: cleanedPollOptions,
           }
         : undefined;
 
-    if (isPollPost && !pollDraft) {
+    if (wantsPoll && !pollDraft) {
       alert("Add a poll question and at least two options.");
       return;
     }
@@ -326,6 +358,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       setMediaDurationMs(undefined);
       setMediaSizeBytes(undefined);
       setCategory(undefined);
+      setIncludePoll(false);
       setPollQuestion("");
       setPollOptions(["", ""]);
       setSaleTitle("");
@@ -366,7 +399,12 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
 
       <Text style={styles.smallTitle}>Post Type</Text>
 
-      <View style={styles.postTypeGrid}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.postTypeGrid}
+        style={styles.postTypeScroller}
+      >
         {postTypeOptions.map((item) => {
           const active = postType === item.key;
 
@@ -400,7 +438,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {!!fieldConfigs[postType]?.length && (
         <View style={styles.pollComposerCard}>
@@ -420,12 +458,107 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
                 value={postFields[field.key] || ""}
                 onChangeText={(value) => updatePostField(field.key, value)}
                 editable={!uploading}
-                multiline={["description", "details", "whyRecommend", "whySpecial", "review", "requirements"].includes(field.key)}
+                multiline={field.multiline || LONG_TEXT_FIELD_KEYS.includes(field.key as any)}
+                maxLength={field.maxLength}
+                keyboardType={field.keyboardType || "default"}
+                autoCapitalize={field.keyboardType === "url" ? "none" : "sentences"}
               />
             ))}
           </View>
         </View>
       )}
+
+      <View style={styles.pollComposerCard}>
+        <View style={styles.pollComposerHeader}>
+          <View>
+            <Text style={styles.pollComposerTitle}>Poll</Text>
+            <Text style={styles.switchHelp}>
+              {postType === "poll"
+                ? "Polls are required for the Poll post type."
+                : "Add a poll to this post if you want people to vote."}
+            </Text>
+          </View>
+
+          {postType !== "poll" ? (
+            <Pressable
+              style={[
+                styles.pollToggleButton,
+                includePoll && styles.pollToggleButtonActive,
+              ]}
+              onPress={() => setIncludePoll((current) => !current)}
+              disabled={uploading}
+            >
+              <Text
+                style={[
+                  styles.pollToggleText,
+                  includePoll && styles.pollToggleTextActive,
+                ]}
+              >
+                {includePoll ? "Included" : "Add poll"}
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.pollRequiredBadge}>
+              <Text style={styles.pollRequiredBadgeText}>Required</Text>
+            </View>
+          )}
+        </View>
+
+        {wantsPoll && (
+          <View style={{ marginTop: 14, gap: 10 }}>
+            <TextInput
+              style={styles.pollInput}
+              placeholder="Poll question"
+              placeholderTextColor="#64748B"
+              value={pollQuestion}
+              onChangeText={setPollQuestion}
+              editable={!uploading}
+            />
+
+            {pollOptions.map((option, index) => (
+              <TextInput
+                key={index}
+                style={styles.pollInput}
+                placeholder={`Option ${index + 1}`}
+                placeholderTextColor="#64748B"
+                value={option}
+                onChangeText={(value) => {
+                  setPollOptions((currentOptions) =>
+                    currentOptions.map((currentOption, optionIndex) =>
+                      optionIndex === index ? value : currentOption
+                    )
+                  );
+                }}
+                editable={!uploading}
+              />
+            ))}
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {pollOptions.length < 4 && (
+                <Pressable
+                  style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
+                  onPress={() => setPollOptions((options) => [...options, ""])}
+                  disabled={uploading}
+                >
+                  <Text style={styles.secondaryButtonText}>Add option</Text>
+                </Pressable>
+              )}
+
+              {pollOptions.length > 2 && (
+                <Pressable
+                  style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
+                  onPress={() =>
+                    setPollOptions((options) => options.slice(0, options.length - 1))
+                  }
+                  disabled={uploading}
+                >
+                  <Text style={styles.secondaryButtonText}>Remove</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
 
       <Text style={styles.smallTitle}>Choose Category</Text>
 
@@ -543,7 +676,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         <View style={{ flex: 1 }}>
           <Text style={styles.pollComposerTitle}>Video length</Text>
           <Text style={styles.switchHelp}>
-            Tutorials allow longer videos but still upload with size limits.
+            Videos are compressed on pick, shown as thumbnails in the feed, and only load after a tap.
           </Text>
         </View>
 
@@ -576,6 +709,20 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         </View>
       </View>
 
+      <View style={styles.mediaLimitGrid}>
+        <View style={styles.mediaLimitPill}>
+          <Text style={styles.mediaLimitNumber}>30s</Text>
+          <Text style={styles.mediaLimitLabel}>Normal video max</Text>
+        </View>
+        <View style={styles.mediaLimitPill}>
+          <Text style={styles.mediaLimitNumber}>10m</Text>
+          <Text style={styles.mediaLimitLabel}>Tutorial max</Text>
+        </View>
+        <View style={styles.mediaSavingsBadge}>
+          <Text style={styles.mediaSavingsText}>Thumbnail-first feed</Text>
+        </View>
+      </View>
+
       <Pressable
         style={styles.secondaryButton}
         onPress={pickMedia}
@@ -590,70 +737,6 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         </Text>
       </Pressable>
 
-      {postType === "poll" && (
-      <View style={styles.pollComposerCard}>
-        <View style={styles.pollComposerHeader}>
-          <View>
-            <Text style={styles.pollComposerTitle}>Create a poll</Text>
-            <Text style={styles.switchHelp}>Ask neighbors to pick one option.</Text>
-          </View>
-        </View>
-
-          <View style={{ marginTop: 14, gap: 10 }}>
-            <TextInput
-              style={styles.pollInput}
-              placeholder="Poll question"
-              placeholderTextColor="#64748B"
-              value={pollQuestion}
-              onChangeText={setPollQuestion}
-              editable={!uploading}
-            />
-
-            {pollOptions.map((option, index) => (
-              <TextInput
-                key={index}
-                style={styles.pollInput}
-                placeholder={`Option ${index + 1}`}
-                placeholderTextColor="#64748B"
-                value={option}
-                onChangeText={(value) => {
-                  setPollOptions((currentOptions) =>
-                    currentOptions.map((currentOption, optionIndex) =>
-                      optionIndex === index ? value : currentOption
-                    )
-                  );
-                }}
-                editable={!uploading}
-              />
-            ))}
-
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              {pollOptions.length < 4 && (
-                <Pressable
-                  style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
-                  onPress={() => setPollOptions((options) => [...options, ""])}
-                  disabled={uploading}
-                >
-                  <Text style={styles.secondaryButtonText}>Add option</Text>
-                </Pressable>
-              )}
-
-              {pollOptions.length > 2 && (
-                <Pressable
-                  style={[styles.secondaryButton, { flex: 1, marginTop: 0 }]}
-                  onPress={() =>
-                    setPollOptions((options) => options.slice(0, options.length - 1))
-                  }
-                  disabled={uploading}
-                >
-                  <Text style={styles.secondaryButtonText}>Remove</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-      </View>
-      )}
-
       {mediaUri && mediaType === "image" && (
         <Image source={{ uri: mediaUri }} style={styles.previewImage} />
       )}
@@ -666,7 +749,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
             {mediaKind === "tutorial" ? "Tutorial video" : "Post video"}
           </Text>
           <Text style={styles.mediaInfoText}>
-            {formatDuration(mediaDurationMs)} · {formatBytes(mediaSizeBytes)} · loads only after tap in feed
+            {formatDuration(mediaDurationMs)} · {formatBytes(mediaSizeBytes)} · compressed export · thumbnail required
           </Text>
         </View>
       )}
