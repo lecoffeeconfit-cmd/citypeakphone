@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useMemo, useState } from "react";
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native"; import { useVideoPlayer, VideoView } from "expo-video";
+import { FeedMedia } from "./FeedMedia";
 import { PollCard } from "./PollCard";
 import { styles } from "../styles";
 import { Post, ReactionKey, reactionButtons, type Coordinates } from "../types";
@@ -81,33 +82,70 @@ function PostCardComponent({
   const previewComments = post.comments.slice(0, 2);
   const isOwner = !!currentUserId && post.uid === currentUserId;
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const profilePhotoSource = useMemo(
     () => getStableImageSource(post.photoUrl, `post ${post.id} author photo`),
     [post.photoUrl, post.id]
   );
-  const feedImageSource = useMemo(
-    () =>
-      getStableImageSource(
-        post.mediaType === "video"
-          ? post.imageThumbnailUri
-          : post.imageThumbnailUri || post.imageUri,
-        `post ${post.id} feed image`
-      ),
-    [post.imageThumbnailUri, post.imageUri, post.mediaType, post.id]
-  );
-  const fullImageSource = useMemo(
-    () =>
-      getStableImageSource(
-        post.mediaType === "video" ? undefined : post.imageUri,
-        `post ${post.id} full image`
-      ),
-    [post.imageUri, post.mediaType, post.id]
-  );
+  const fullImageUrls = useMemo(() => {
+    if (post.mediaType === "video") return [];
+
+    const urls =
+      post.imageUris?.length
+        ? post.imageUris
+        : [post.imageUrl || post.imageUri].filter(Boolean);
+
+    return urls.filter((uri): uri is string => !!normalizeMediaUri(uri));
+  }, [post.imageUrl, post.imageUri, post.imageUris, post.mediaType]);
+  const feedThumbnailUrls = useMemo(() => {
+    if (post.mediaType === "video") return [];
+
+    const urls =
+      post.thumbnailUrls?.length
+        ? post.thumbnailUrls
+        : [
+            post.thumbnailUrl ||
+              post.imageUrl ||
+              post.imageUri ||
+              post.imageThumbnailUri,
+          ].filter(Boolean);
+
+    return urls.filter((uri): uri is string => !!normalizeMediaUri(uri));
+  }, [
+    post.imageThumbnailUri,
+    post.imageUri,
+    post.imageUrl,
+    post.mediaType,
+    post.thumbnailUrl,
+    post.thumbnailUrls,
+  ]);
+  const fullImageSource = useMemo(() => {
+    if (!mediaOpen || post.mediaType === "video") return undefined;
+
+    return getStableImageSource(
+      fullImageUrls[selectedImageIndex] || post.imageUrl || post.imageUri,
+      `post ${post.id} full image`
+    );
+  }, [
+    fullImageUrls,
+    mediaOpen,
+    post.imageUrl,
+    post.imageUri,
+    post.mediaType,
+    post.id,
+    selectedImageIndex,
+  ]);
   const videoUri = useMemo(
-    () => normalizeMediaUri(post.mediaType === "video" ? post.imageUri : undefined),
-    [post.imageUri, post.mediaType]
+    () =>
+      normalizeMediaUri(
+        mediaOpen && post.mediaType === "video" ? post.imageUri : undefined
+      ),
+    [mediaOpen, post.imageUri, post.mediaType]
   );
   const selectedReaction = currentUserId ? post.reactedBy?.[currentUserId] : undefined;
+  const isVideoPost = post.mediaType === "video" && !!post.imageUri;
+  const webLazyImageProps = Platform.OS === "web" ? ({ loading: "lazy" } as any) : {};
+  const videoPosterUrl = post.thumbnailUrl || post.imageThumbnailUri;
   const canOpenAuthorProfile = !!post.uid;
   const distanceLabel = formatDistanceAway(userCoordinates, post.postCoordinates);
   const expirationLabel = formatExpirationLabel(post.expiresAt);
@@ -209,6 +247,7 @@ function PostCardComponent({
         >
           {profilePhotoSource ? (
             <Image
+              {...webLazyImageProps}
               source={profilePhotoSource}
               style={{
                 width: 58,
@@ -234,6 +273,9 @@ function PostCardComponent({
           <Text style={styles.location}>
             {post.location} • {timeAgo(post.createdAt)}
           </Text>
+          {canOpenAuthorProfile && (
+            <Text style={styles.postAuthorProfileHint}>Tap author to view profile</Text>
+          )}
           <View style={styles.postApiMeta}>
             <Text style={styles.postApiMetaText}>
               📍 GPS location: {post.postCoordinates ? "Device GPS" : "Not saved"}
@@ -340,113 +382,17 @@ function PostCardComponent({
         />
       )}
 
-      {videoUri && post.mediaType === "video" && (
-        <Pressable onPress={() => setMediaOpen(true)}>
-          <View
-            style={{
-              height: 220,
-              borderRadius: 24,
-              overflow: "hidden",
-              borderWidth: 1,
-              borderColor: "#334155",
-              marginBottom: 15,
-              position: "relative",
-              backgroundColor: "rgba(15, 23, 42, 0.30)",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {feedImageSource && (
-              <Image
-                source={feedImageSource}
-                style={{
-                  position: "absolute",
-                  width: "100%",
-                  height: "100%",
-                }}
-                resizeMode="cover"
-                onLoad={() =>
-                  devLog("[media] loaded post video thumbnail", post.imageThumbnailUri)
-                }
-                onError={() =>
-                  devLog("[media] failed post video thumbnail", post.imageThumbnailUri)
-                }
-              />
-            )}
-            {feedImageSource && (
-              <View
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  backgroundColor: "rgba(0,0,0,0.28)",
-                }}
-              />
-            )}
-            <Text style={{ color: "white", fontSize: 42, fontWeight: "900" }}>
-              ▶
-            </Text>
-            <Text
-              style={{
-                color: "#CBD5E1",
-                fontWeight: "900",
-                marginTop: 8,
-              }}
-            >
-              Tap to load video
-            </Text>
-            {post.mediaKind === "tutorial" && (
-              <Text
-                style={{
-                  color: "#86B5CF",
-                  fontWeight: "900",
-                  marginTop: 5,
-                  fontSize: 12,
-                }}
-              >
-                Tutorial · opens on demand
-              </Text>
-            )}
-
-            <View
-              style={{
-                position: "absolute",
-                top: 12,
-                right: 12,
-                backgroundColor: "rgba(0,0,0,0.75)",
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-              }}
-            >
-              <Text
-                style={{
-                  color: "white",
-                  fontWeight: "900",
-                  fontSize: 12,
-                }}
-              >
-                {post.mediaKind === "tutorial" ? "▶ TUTORIAL" : "▶ VIDEO"}
-              </Text>
-            </View>
-          </View>
-        </Pressable>
-      )}
-
-      {post.mediaType !== "video" &&
-        feedImageSource && (
-          <Pressable onPress={() => setMediaOpen(true)}>
-            <Image
-              source={feedImageSource}
-              style={styles.postImage}
-              resizeMode="contain"
-              onLoad={() => devLog("[media] loaded post feed image", post.imageThumbnailUri || post.imageUri)}
-              onError={() => devLog("[media] failed post feed image", post.imageThumbnailUri || post.imageUri)}
-            />
-          </Pressable>
-        )}
+      <FeedMedia
+        mediaType={isVideoPost ? "video" : post.mediaType}
+        thumbnailUrls={feedThumbnailUrls}
+        posterUrl={videoPosterUrl}
+        mediaKind={post.mediaKind}
+        onOpenVideo={() => setMediaOpen(true)}
+        onOpenImage={(index) => {
+          setSelectedImageIndex(index);
+          setMediaOpen(true);
+        }}
+      />
 
       <View
         style={{

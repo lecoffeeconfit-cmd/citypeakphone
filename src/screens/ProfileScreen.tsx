@@ -7,6 +7,15 @@ import { formatExpirationLabel, getExpirationTimestamp } from "../utils/expirati
 import { devLog, getStableImageSource } from "../utils/media";
 
 type ProfileView = "overview" | "posts" | "saved" | "following";
+const PROFILE_PHOTO_SOURCE_MAX_BYTES = 15 * 1024 * 1024;
+
+function formatBytes(bytes?: number) {
+  if (!bytes) return "unknown size";
+
+  const megabytes = bytes / (1024 * 1024);
+
+  return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
+}
 
 type FollowUserSummary = {
   uid: string;
@@ -121,7 +130,18 @@ onDeleteAccount,
     });
 
     if (!result.canceled) {
-      setLocalImageUri(result.assets[0].uri);
+      const asset = result.assets[0];
+
+      if (asset.fileSize && asset.fileSize > PROFILE_PHOTO_SOURCE_MAX_BYTES) {
+        alert(
+          `This photo is ${formatBytes(asset.fileSize)}. Choose a profile photo under ${formatBytes(
+            PROFILE_PHOTO_SOURCE_MAX_BYTES
+          )}.`
+        );
+        return;
+      }
+
+      setLocalImageUri(asset.uri);
       setIsEditing(true);
     }
   }
@@ -337,60 +357,6 @@ onDeleteAccount,
           </View>
         </View>
 
-        <View style={styles.notificationPreferenceCard}>
-          <View style={styles.profilePostHeader}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.analyticsKicker}>Notifications</Text>
-              <Text style={styles.analyticsTitle}>
-                {notificationsEnabled ? "Alerts are on" : "Choose your alerts"}
-              </Text>
-            </View>
-            {!notificationsEnabled && (
-              <Pressable
-                style={styles.profilePostActionButton}
-                onPress={onEnableNotifications}
-              >
-                <Text style={styles.profilePostActionText}>Turn on</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {(
-            [
-              ["messages", "Messages", "Direct chats"],
-              ["comments", "Comments", "Replies and post activity"],
-              ["follows", "Follows", "New followers"],
-              ["localAlerts", "Local alerts", "Important nearby updates"],
-            ] as [keyof NotificationPreferences, string, string][]
-          ).map(([key, label, helper]) => (
-            <Pressable
-              key={key}
-              style={styles.notificationPreferenceRow}
-              onPress={() => onToggleNotificationPreference(key)}
-            >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.notificationPreferenceTitle}>{label}</Text>
-                <Text style={styles.notificationPreferenceHelp}>{helper}</Text>
-              </View>
-              <View
-                style={[
-                  styles.notificationToggle,
-                  notificationPreferences[key] && styles.notificationToggleActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.notificationToggleText,
-                    notificationPreferences[key] && styles.notificationToggleTextActive,
-                  ]}
-                >
-                  {notificationPreferences[key] ? "On" : "Off"}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-
         <View style={styles.analyticsCard}>
           <Text style={styles.analyticsKicker}>Engagement</Text>
           <Text style={styles.analyticsTitle}>Your post analytics</Text>
@@ -557,6 +523,60 @@ onDeleteAccount,
           <Text style={styles.primaryButtonText}>Edit Profile</Text>
         </Pressable>
       )}
+
+      <View style={styles.notificationPreferenceCard}>
+        <View style={styles.profilePostHeader}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.analyticsKicker}>Notifications</Text>
+            <Text style={styles.analyticsTitle}>
+              {notificationsEnabled ? "Alerts are on" : "Choose your alerts"}
+            </Text>
+          </View>
+          {!notificationsEnabled && (
+            <Pressable
+              style={styles.profilePostActionButton}
+              onPress={onEnableNotifications}
+            >
+              <Text style={styles.profilePostActionText}>Turn on</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {(
+          [
+            ["messages", "Messages", "Direct chats"],
+            ["comments", "Comments", "Replies and post activity"],
+            ["follows", "Follows", "New followers"],
+            ["localAlerts", "Local alerts", "Important nearby updates"],
+          ] as [keyof NotificationPreferences, string, string][]
+        ).map(([key, label, helper]) => (
+          <Pressable
+            key={key}
+            style={styles.notificationPreferenceRow}
+            onPress={() => onToggleNotificationPreference(key)}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.notificationPreferenceTitle}>{label}</Text>
+              <Text style={styles.notificationPreferenceHelp}>{helper}</Text>
+            </View>
+            <View
+              style={[
+                styles.notificationToggle,
+                notificationPreferences[key] && styles.notificationToggleActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.notificationToggleText,
+                  notificationPreferences[key] && styles.notificationToggleTextActive,
+                ]}
+              >
+                {notificationPreferences[key] ? "On" : "Off"}
+              </Text>
+            </View>
+          </Pressable>
+        ))}
+      </View>
 
       <View style={styles.accountActionCard}>
         <View style={styles.accountIconBox}>

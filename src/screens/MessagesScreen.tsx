@@ -18,7 +18,9 @@ import {
   collection,
   deleteDoc,
   doc,
+  limit,
   onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -32,6 +34,11 @@ type MessagesScreenProps = {
   currentUser: User;
   username: string;
   startingUserId?: string | null;
+  onOpenUserProfile?: (target: {
+    uid?: string;
+    username?: string;
+    photoUrl?: string;
+  }) => void;
 };
 
 type AppUser = {
@@ -77,6 +84,7 @@ export function MessagesScreen({
   currentUser,
   username,
   startingUserId,
+  onOpenUserProfile,
 }: MessagesScreenProps) {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
@@ -113,11 +121,17 @@ export function MessagesScreen({
 
   useEffect(() => {
     countUsage("listener-create:messages-blocked-user");
-    const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (userDoc) => {
-      countUsage("messages-blocked-user-snapshot");
-      const data = userDoc.data();
-      setBlockedUserIds(data?.blockedUserIds ?? []);
-    });
+    const unsubscribe = onSnapshot(
+      doc(db, "users", currentUser.uid),
+      (userDoc) => {
+        countUsage("messages-blocked-user-snapshot");
+        const data = userDoc.data();
+        setBlockedUserIds(data?.blockedUserIds ?? []);
+      },
+      () => {
+        Alert.alert("Messages unavailable", "Unable to load block settings right now.");
+      }
+    );
 
     return () => {
       countUsage("listener-cleanup:messages-blocked-user");
@@ -127,17 +141,24 @@ export function MessagesScreen({
 
   useEffect(() => {
     countUsage("listener-create:messages-users");
-    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-      countUsage("messages-users-snapshot", snapshot.size);
-      const loadedUsers: AppUser[] = snapshot.docs
-        .map((userDoc) => ({
-          id: userDoc.id,
-          ...(userDoc.data() as Omit<AppUser, "id">),
-        }))
-        .filter((user) => user.uid !== currentUser.uid);
+    const q = query(collection(db, "users"), orderBy("username"), limit(100));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        countUsage("messages-users-snapshot", snapshot.size);
+        const loadedUsers: AppUser[] = snapshot.docs
+          .map((userDoc) => ({
+            id: userDoc.id,
+            ...(userDoc.data() as Omit<AppUser, "id">),
+          }))
+          .filter((user) => user.uid !== currentUser.uid);
 
-      setUsers(loadedUsers);
-    });
+        setUsers(loadedUsers);
+      },
+      () => {
+        Alert.alert("Users unavailable", "Unable to load people right now.");
+      }
+    );
 
     return () => {
       countUsage("listener-cleanup:messages-users");
@@ -149,24 +170,32 @@ export function MessagesScreen({
     countUsage("listener-create:messages-thread-list");
     const q = query(
       collection(db, "messages"),
-      where("participants", "array-contains", currentUser.uid)
+      where("participants", "array-contains", currentUser.uid),
+      orderBy("createdAt", "desc"),
+      limit(200)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      countUsage("messages-thread-list-snapshot", snapshot.size);
-      const loadedMessages: Message[] = snapshot.docs
-        .map((messageDoc) => ({
-          id: messageDoc.id,
-          ...(messageDoc.data() as Omit<Message, "id">),
-        }))
-        .sort(
-          (a, b) =>
-            getMessageDate(a.createdAt).getTime() -
-            getMessageDate(b.createdAt).getTime()
-        );
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        countUsage("messages-thread-list-snapshot", snapshot.size);
+        const loadedMessages: Message[] = snapshot.docs
+          .map((messageDoc) => ({
+            id: messageDoc.id,
+            ...(messageDoc.data() as Omit<Message, "id">),
+          }))
+          .sort(
+            (a, b) =>
+              getMessageDate(a.createdAt).getTime() -
+              getMessageDate(b.createdAt).getTime()
+          );
 
-      setAllMessages(loadedMessages);
-    });
+        setAllMessages(loadedMessages);
+      },
+      () => {
+        Alert.alert("Messages unavailable", "Unable to load messages right now.");
+      }
+    );
 
     return () => {
       countUsage("listener-cleanup:messages-thread-list");
@@ -250,28 +279,49 @@ export function MessagesScreen({
   async function blockSelectedUser() {
     if (!selectedUser) return;
 
-    const confirmBlock = window.confirm(
-      `Block @${selectedUser.username}? Their messages will be hidden and they will disappear from your conversations.`
+    Alert.alert(
+      `Block @${selectedUser.username}?`,
+      "Their messages will be hidden and they will disappear from your conversations.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Block",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, "users", currentUser.uid), {
+                blockedUserIds: arrayUnion(selectedUser.uid),
+              });
+
+              setSelectedUser(null);
+              Alert.alert("User blocked", `@${selectedUser.username} has been blocked.`);
+            } catch (error: any) {
+              Alert.alert(
+                "Block failed",
+                error.message || "Unable to block this user. Please try again."
+              );
+            }
+          },
+        },
+      ]
     );
-
-    if (!confirmBlock) return;
-
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      blockedUserIds: arrayUnion(selectedUser.uid),
-    });
-
-    setSelectedUser(null);
-    alert(`@${selectedUser.username} has been blocked.`);
   }
 
   async function unblockSelectedUser() {
     if (!selectedUser) return;
 
-    await updateDoc(doc(db, "users", currentUser.uid), {
-      blockedUserIds: arrayRemove(selectedUser.uid),
-    });
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid), {
+        blockedUserIds: arrayRemove(selectedUser.uid),
+      });
 
-    Alert.alert("User unblocked", `@${selectedUser.username} has been unblocked.`);
+      Alert.alert("User unblocked", `@${selectedUser.username} has been unblocked.`);
+    } catch (error: any) {
+      Alert.alert(
+        "Unblock failed",
+        error.message || "Unable to unblock this user. Please try again."
+      );
+    }
   }
 
   async function sendMessage() {
@@ -291,17 +341,25 @@ export function MessagesScreen({
 
     setMessageText("");
 
-    await addDoc(collection(db, "messages"), {
-      fromUid: currentUser.uid,
-      toUid: selectedUser.uid,
-      fromUsername: username,
-      toUsername: selectedUser.username,
-      text: cleanedText,
-      participants: [currentUser.uid, selectedUser.uid],
-      reactions: {},
-      readBy: [currentUser.uid],
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, "messages"), {
+        fromUid: currentUser.uid,
+        toUid: selectedUser.uid,
+        fromUsername: username,
+        toUsername: selectedUser.username,
+        text: cleanedText,
+        participants: [currentUser.uid, selectedUser.uid],
+        reactions: {},
+        readBy: [currentUser.uid],
+        createdAt: serverTimestamp(),
+      });
+    } catch (error: any) {
+      setMessageText(cleanedText);
+      Alert.alert(
+        "Message failed",
+        error.message || "Unable to send this message. Please try again."
+      );
+    }
   }
 
   async function deleteMessage(messageId: string) {
@@ -342,6 +400,14 @@ export function MessagesScreen({
         })
       )
     );
+  }
+
+  function openUserProfile(user: AppUser) {
+    onOpenUserProfile?.({
+      uid: user.uid,
+      username: user.username,
+      photoUrl: user.photoUrl,
+    });
   }
 
   if (selectedUser) {
@@ -393,9 +459,24 @@ export function MessagesScreen({
             </Pressable>
           </View>
 
-          <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
-            Chat with @{selectedUser.username}
-          </Text>
+          <Pressable
+            onPress={() => openUserProfile(selectedUser)}
+            style={styles.messageProfileHeader}
+          >
+            <View style={styles.messageProfileAvatar}>
+              <Text style={styles.messageProfileAvatarText}>
+                {selectedUser.username[0]?.toUpperCase() || "?"}
+              </Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={styles.messageProfileName}>
+                @{selectedUser.username}
+              </Text>
+              <Text numberOfLines={1} style={styles.messageProfileHint}>
+                View profile
+              </Text>
+            </View>
+          </Pressable>
 
           <FlatList
             ref={messagesListRef}
@@ -504,7 +585,7 @@ export function MessagesScreen({
               flexDirection: "row",
               gap: 8,
               marginTop: 12,
-              marginBottom: keyboardVisible ? 2 : 95,
+              marginBottom: keyboardVisible ? 2 : 112,
             }}
           >
             <TextInput
@@ -592,13 +673,30 @@ export function MessagesScreen({
                 marginBottom: 10,
               }}
             >
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
-                @{item.username}
-              </Text>
-
-              <Text style={{ color: "#94A3B8", marginTop: 4 }}>
-                Tap to message
-              </Text>
+              <View style={styles.messageUserRow}>
+                <View style={styles.messageProfileAvatar}>
+                  <Text style={styles.messageProfileAvatarText}>
+                    {item.username[0]?.toUpperCase() || "?"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
+                    @{item.username}
+                  </Text>
+                  <Text numberOfLines={1} style={{ color: "#94A3B8", marginTop: 4 }}>
+                    Tap to message
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.messageProfilePill}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    openUserProfile(item);
+                  }}
+                >
+                  <Text style={styles.messageProfilePillText}>Profile</Text>
+                </Pressable>
+              </View>
             </Pressable>
           )}
           ListEmptyComponent={
@@ -626,36 +724,54 @@ export function MessagesScreen({
                 marginBottom: 10,
               }}
             >
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>
-                  @{item.user.username}
-                </Text>
-
-                {getUnreadCountForUser(item.user.uid) > 0 && (
-                  <Text
-                    style={{
-                      color: "white",
-                      backgroundColor: "#DC2626",
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 999,
-                      fontWeight: "900",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {getUnreadCountForUser(item.user.uid)}
+              <View style={styles.messageUserRow}>
+                <View style={styles.messageProfileAvatar}>
+                  <Text style={styles.messageProfileAvatarText}>
+                    {item.user.username[0]?.toUpperCase() || "?"}
                   </Text>
-                )}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Text numberOfLines={1} style={{ color: "white", fontWeight: "900", fontSize: 16, flex: 1 }}>
+                      @{item.user.username}
+                    </Text>
+
+                    {getUnreadCountForUser(item.user.uid) > 0 && (
+                      <Text
+                        style={{
+                          color: "white",
+                          backgroundColor: "#DC2626",
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 999,
+                          fontWeight: "900",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {getUnreadCountForUser(item.user.uid)}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text numberOfLines={1} style={{ color: "#94A3B8", marginTop: 4 }}>
+                    {item.lastMessage.fromUid === currentUser.uid ? "You: " : ""}
+                    {item.lastMessage.text}
+                  </Text>
+
+                  <Text style={{ color: "#64748B", marginTop: 4, fontSize: 12 }}>
+                    {formatMessageTime(item.lastMessage.createdAt)}
+                  </Text>
+                </View>
+                <Pressable
+                  style={styles.messageProfilePill}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    openUserProfile(item.user);
+                  }}
+                >
+                  <Text style={styles.messageProfilePillText}>Profile</Text>
+                </Pressable>
               </View>
-
-              <Text numberOfLines={1} style={{ color: "#94A3B8", marginTop: 4 }}>
-                {item.lastMessage.fromUid === currentUser.uid ? "You: " : ""}
-                {item.lastMessage.text}
-              </Text>
-
-              <Text style={{ color: "#64748B", marginTop: 4, fontSize: 12 }}>
-                {formatMessageTime(item.lastMessage.createdAt)}
-              </Text>
             </Pressable>
           )}
           ListEmptyComponent={

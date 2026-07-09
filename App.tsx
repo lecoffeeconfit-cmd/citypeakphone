@@ -138,14 +138,26 @@ type UserProfileTarget = {
 
 const REGULAR_VIDEO_MAX_MS = 30 * 1000;
 const TUTORIAL_VIDEO_MAX_MS = 10 * 60 * 1000;
-const REGULAR_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
-const TUTORIAL_VIDEO_MAX_BYTES = 250 * 1024 * 1024;
+const REGULAR_VIDEO_MAX_BYTES = 40 * 1024 * 1024;
+const TUTORIAL_VIDEO_MAX_BYTES = 120 * 1024 * 1024;
+const FULL_IMAGE_MAX_BYTES = 1400 * 1024;
+const THUMBNAIL_IMAGE_MAX_BYTES = 250 * 1024;
+const PROFILE_IMAGE_MAX_BYTES = 180 * 1024;
 
 type ImageUploadOptions = {
   width?: number;
   compress?: number;
+  maxBytes?: number;
   skipProcessing?: boolean;
 };
+
+function estimateDataUriBytes(uri: string) {
+  const [, payload = ""] = uri.split(",");
+
+  if (!payload) return null;
+
+  return Math.ceil((payload.length * 3) / 4);
+}
 
 function getPostStats(userPosts: Post[]) {
   const totalReactions = userPosts.reduce((total, post) => {
@@ -583,6 +595,33 @@ function PublicUserProfileModal({
                 </Text>
               )}
 
+              {!isSelf && (
+                <Pressable
+                  style={[
+                    styles.profileBioFollowButton,
+                    isFollowing && styles.profileBioFollowButtonActive,
+                    (followBusy || isBlocked) && { opacity: 0.65 },
+                  ]}
+                  onPress={() => onToggleFollow(profile)}
+                  disabled={followBusy || isBlocked}
+                >
+                  <Text
+                    style={[
+                      styles.profileBioFollowButtonText,
+                      isFollowing && styles.profileBioFollowButtonTextActive,
+                    ]}
+                  >
+                    {followBusy
+                      ? "Saving..."
+                      : isBlocked
+                      ? "Blocked"
+                      : isFollowing
+                      ? "Following"
+                      : "Follow"}
+                  </Text>
+                </Pressable>
+              )}
+
               <View style={styles.statsRow}>
                 <View style={styles.statBox}>
                   <Text style={styles.statNumber}>{profile.stats.posts}</Text>
@@ -646,25 +685,6 @@ function PublicUserProfileModal({
             {!isSelf && (
               <View style={styles.profileActionRow}>
                 <Pressable
-                  style={[
-                    styles.followButton,
-                    isFollowing && styles.followButtonActive,
-                    (followBusy || isBlocked) && { opacity: 0.65 },
-                  ]}
-                  onPress={() => onToggleFollow(profile)}
-                  disabled={followBusy || isBlocked}
-                >
-                  <Text
-                    style={[
-                      styles.followButtonText,
-                      isFollowing && styles.followButtonTextActive,
-                    ]}
-                  >
-                    {followBusy ? "Saving..." : isFollowing ? "Following" : "Follow"}
-                  </Text>
-                </Pressable>
-
-                <Pressable
                   style={[styles.primaryButton, { flex: 1, marginTop: 0 }]}
                   onPress={() => onMessage(profile)}
                   disabled={isBlocked}
@@ -677,28 +697,79 @@ function PublicUserProfileModal({
             )}
 
             {!isSelf && (
-              <Pressable
+              <View
                 style={[
-                  styles.blockProfileButton,
-                  isBlocked && styles.blockProfileButtonActive,
+                  styles.blockProfileActionCard,
+                  isBlocked && styles.blockProfileActionCardActive,
                   blockBusy && { opacity: 0.65 },
                 ]}
-                onPress={() => onToggleBlock(profile)}
-                disabled={blockBusy}
               >
-                <Text
+                <View style={styles.blockProfileContentRow}>
+                  <View
+                    style={[
+                      styles.blockProfileIconBox,
+                      isBlocked && styles.blockProfileIconBoxActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.blockProfileIconText,
+                        isBlocked && styles.blockProfileIconTextActive,
+                      ]}
+                    >
+                      !
+                    </Text>
+                  </View>
+
+                  <View style={styles.blockProfileTextBlock}>
+                    <Text
+                      style={[
+                        styles.blockProfileKicker,
+                        isBlocked && styles.blockProfileKickerActive,
+                      ]}
+                    >
+                      Profile control
+                    </Text>
+                    <Text style={styles.blockProfileTitle}>
+                      {isBlocked ? "User blocked" : "Block user"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.blockProfileSubtitle,
+                        isBlocked && styles.blockProfileSubtitleActive,
+                      ]}
+                    >
+                      {isBlocked
+                        ? "Unblock to see posts, follow, or message this profile again."
+                        : "Hide this person's posts and messages from your CityPeak experience."}
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
                   style={[
-                    styles.blockProfileButtonText,
-                    isBlocked && styles.blockProfileButtonTextActive,
+                    styles.blockProfileButton,
+                    isBlocked && styles.blockProfileButtonPillActive,
+                    blockBusy && styles.blockProfileButtonBusy,
                   ]}
+                  onPress={() => onToggleBlock(profile)}
+                  disabled={blockBusy}
+                  hitSlop={8}
                 >
-                  {blockBusy
-                    ? "Saving..."
-                    : isBlocked
-                    ? "Unblock user"
-                    : "Block user"}
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[
+                      styles.blockProfileButtonText,
+                      isBlocked && styles.blockProfileButtonTextActive,
+                    ]}
+                  >
+                    {blockBusy
+                      ? "Saving..."
+                      : isBlocked
+                      ? "Unblock user"
+                      : "Block user"}
+                  </Text>
+                </Pressable>
+              </View>
             )}
           </ScrollView>
         </View>
@@ -765,6 +836,68 @@ function AdminVideoPreview({ uri }: { uri: string }) {
     </Pressable>
   );
 }
+
+function AdminReportImagePreview({
+  thumbnailUri,
+  fullUri,
+}: {
+  thumbnailUri?: string;
+  fullUri?: string;
+}) {
+  const [isFullLoaded, setIsFullLoaded] = useState(false);
+  const previewUri = thumbnailUri || fullUri;
+  const previewSource = getStableImageSource(
+    previewUri,
+    "report image thumbnail"
+  );
+  const fullSource = isFullLoaded
+    ? getStableImageSource(fullUri, "report full image")
+    : undefined;
+  const displaySource = fullSource || previewSource;
+  const canOpenFull = !!fullUri && fullUri !== previewUri && !isFullLoaded;
+
+  if (!displaySource) return null;
+
+  return (
+    <View>
+      <Image
+        source={displaySource}
+        style={{
+          width: "100%",
+          height: 220,
+          borderRadius: 16,
+          marginTop: 12,
+          backgroundColor: "rgba(15, 23, 42, 0.30)",
+        }}
+        onLoad={() =>
+          devLog(
+            isFullLoaded
+              ? "[media] loaded report full image"
+              : "[media] loaded report thumbnail",
+            isFullLoaded ? fullUri : previewUri
+          )
+        }
+        onError={() =>
+          devLog(
+            isFullLoaded
+              ? "[media] failed report full image"
+              : "[media] failed report thumbnail",
+            isFullLoaded ? fullUri : previewUri
+          )
+        }
+      />
+
+      {canOpenFull && (
+        <Pressable
+          style={[styles.secondaryButton, { marginTop: 10 }]}
+          onPress={() => setIsFullLoaded(true)}
+        >
+          <Text style={styles.secondaryButtonText}>Open full image</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
 export default function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
@@ -795,7 +928,7 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [profilePosts, setProfilePosts] = useState<Post[]>([]);
   const [userCoordinates, setUserCoordinates] = useState<Coordinates | null>(null);
-  const [feedLimit, setFeedLimit] = useState(25);
+  const [feedLimit, setFeedLimit] = useState(15);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [feedRefreshNonce, setFeedRefreshNonce] = useState(0);
   const [feedRefreshing, setFeedRefreshing] = useState(false);
@@ -1022,26 +1155,34 @@ export default function App() {
       limit(feedLimit + 1)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      countUsage("feed-snapshot", {
-        requestedLimit: feedLimit,
-        snapshotSize: snapshot.size,
-      });
-      devLog("[feed] posts snapshot received", {
-        requestedLimit: feedLimit,
-        snapshotSize: snapshot.size,
-      });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        countUsage("feed-snapshot", {
+          requestedLimit: feedLimit,
+          snapshotSize: snapshot.size,
+        });
+        devLog("[feed] posts snapshot received", {
+          requestedLimit: feedLimit,
+          snapshotSize: snapshot.size,
+        });
 
-      feedLoadingMoreRef.current = false;
-      const firebasePosts: Post[] = snapshot.docs.map((snapDoc) => ({
-        id: snapDoc.id,
-        ...(snapDoc.data() as Omit<Post, "id">),
-      }));
+        feedLoadingMoreRef.current = false;
+        const firebasePosts: Post[] = snapshot.docs.map((snapDoc) => ({
+          id: snapDoc.id,
+          ...(snapDoc.data() as Omit<Post, "id">),
+        }));
 
-      setHasMorePosts(firebasePosts.length > feedLimit);
-      setPosts(firebasePosts.slice(0, feedLimit));
-      setFeedRefreshing(false);
-    });
+        setHasMorePosts(firebasePosts.length > feedLimit);
+        setPosts(firebasePosts.slice(0, feedLimit));
+        setFeedRefreshing(false);
+      },
+      (error) => {
+        devLog("[feed] posts listener error", error);
+        feedLoadingMoreRef.current = false;
+        setFeedRefreshing(false);
+      }
+    );
 
     return () => {
       countUsage("listener-cleanup:feed-posts", { feedLimit, feedRefreshNonce });
@@ -1101,23 +1242,31 @@ export default function App() {
     countUsage("listener-create:unread-messages");
     const q = query(
       collection(db, "messages"),
-      where("participants", "array-contains", currentUser.uid)
+      where("participants", "array-contains", currentUser.uid),
+      orderBy("createdAt", "desc"),
+      limit(200)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      countUsage("unread-messages-snapshot", snapshot.size);
-      const unreadCount = snapshot.docs.filter((messageDoc) => {
-        const data = messageDoc.data();
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        countUsage("unread-messages-snapshot", snapshot.size);
+        const unreadCount = snapshot.docs.filter((messageDoc) => {
+          const data = messageDoc.data();
 
-        return (
-          data.fromUid !== currentUser.uid &&
-          !blockedUserIds.includes(data.fromUid) &&
-          !(data.readBy ?? []).includes(currentUser.uid)
-        );
-      }).length;
+          return (
+            data.fromUid !== currentUser.uid &&
+            !blockedUserIds.includes(data.fromUid) &&
+            !(data.readBy ?? []).includes(currentUser.uid)
+          );
+        }).length;
 
-      setUnreadMessagesCount(unreadCount);
-    });
+        setUnreadMessagesCount(unreadCount);
+      },
+      (error) => {
+        devLog("[messages] unread listener error", error);
+      }
+    );
 
     return () => {
       countUsage("listener-cleanup:unread-messages");
@@ -1169,23 +1318,60 @@ export default function App() {
     uri: string,
     options: ImageUploadOptions = {}
   ) {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: options.width ?? 1600 } }],
-      {
-        compress: options.compress ?? 0.72,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
+    let width = options.width ?? 1600;
+    let compress = options.compress ?? 0.72;
+    let lastResultUri = uri;
+    let lastSize: number | null = null;
 
-    devLog("[media] compressed image for upload", {
-      originalUri: uri,
-      compressedUri: result.uri,
-      width: result.width,
-      height: result.height,
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const result = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width } }],
+        {
+          compress,
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      const dataUriSize = result.uri.startsWith("data:")
+        ? estimateDataUriBytes(result.uri)
+        : null;
+      const fileInfo = dataUriSize
+        ? null
+        : await FileSystem.getInfoAsync(result.uri).catch(() => null);
+      const fileSize =
+        dataUriSize ||
+        (fileInfo?.exists && typeof (fileInfo as any).size === "number"
+          ? (fileInfo as any).size
+          : null);
+
+      lastResultUri = result.uri;
+      lastSize = fileSize;
+
+      devLog("[media] compressed image for upload", {
+        originalUri: uri,
+        compressedUri: result.uri,
+        width: result.width,
+        height: result.height,
+        fileSize,
+        targetMaxBytes: options.maxBytes,
+        attempt: attempt + 1,
+      });
+
+      if (!options.maxBytes || !fileSize || fileSize <= options.maxBytes) {
+        return result.uri;
+      }
+
+      width = Math.max(480, Math.round(width * 0.82));
+      compress = Math.max(0.48, compress - 0.12);
+    }
+
+    devLog("[media] image remained above target after compression attempts", {
+      uri: lastResultUri,
+      fileSize: lastSize,
+      targetMaxBytes: options.maxBytes,
     });
 
-    return result.uri;
+    return lastResultUri;
   }
 
   async function uploadMediaToSupabase(
@@ -1196,7 +1382,9 @@ export default function App() {
     try {
       countUsage("storage-upload-start", mediaType || "unknown");
       const extension = mediaType === "video" ? "mp4" : "jpg";
-      const fileName = `${Date.now()}.${extension}`;
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 10)}.${extension}`;
       const contentType = mediaType === "video" ? "video/mp4" : "image/jpeg";
       const uploadUri =
         mediaType === "video" || imageOptions?.skipProcessing
@@ -1220,12 +1408,13 @@ export default function App() {
         .from("images")
         .upload(fileName, fileBody, {
           contentType,
+          cacheControl: "31536000",
           upsert: false,
         });
 
       if (error) {
         devLog("[media] supabase upload error", error);
-        alert(JSON.stringify(error));
+        alert("Media upload failed. Please try again.");
         return null;
       }
 
@@ -1383,7 +1572,7 @@ export default function App() {
     feedLoadingMoreRef.current = true;
 
     setFeedLimit((currentLimit) => {
-      const nextLimit = currentLimit + 25;
+      const nextLimit = currentLimit + 15;
       devLog("[feed] increasing feed limit", nextLimit);
       return nextLimit;
     });
@@ -1397,22 +1586,6 @@ export default function App() {
     setFeedRefreshNonce((nonce) => nonce + 1);
   }
 
-  const reportImagePreviewSources = useMemo(() => {
-    const sources = new Map<string, { uri: string }>();
-
-    reports.forEach((report) => {
-      if (report.imageUri && report.mediaType !== "video") {
-        const previewSource = getStableImageSource(report.imageUri, "report image");
-
-        if (previewSource) {
-          sources.set(report.id, previewSource);
-        }
-      }
-    });
-
-    return sources;
-  }, [reports]);
-
   async function saveProfile(
     newUsername: string,
     newBio: string,
@@ -1423,7 +1596,11 @@ export default function App() {
     let uploadedPhotoUrl = photoUrl;
 
     if (imageUri) {
-      const result = await uploadMediaToSupabase(imageUri, "image");
+      const result = await uploadMediaToSupabase(imageUri, "image", {
+        width: 512,
+        compress: 0.72,
+        maxBytes: PROFILE_IMAGE_MAX_BYTES,
+      });
 
       if (result) {
         uploadedPhotoUrl = result;
@@ -1594,7 +1771,8 @@ export default function App() {
     saleCondition?: string,
     expiresAt?: string,
     tags?: string[],
-    postFields?: PostFields
+    postFields?: PostFields,
+    imageUris?: string[]
   ) {
     if (!currentUser) return;
 
@@ -1620,9 +1798,9 @@ export default function App() {
 
       if (mediaSizeBytes && mediaSizeBytes > maxBytes) {
         alert(
-          mediaKind === "tutorial"
-            ? "Tutorial videos must be 250 MB or less."
-            : "Regular post videos must be 80 MB or less."
+          `${mediaKind === "tutorial" ? "Tutorial" : "Regular post"} videos must be ${Math.round(
+            maxBytes / (1024 * 1024)
+          )} MB or less.`
         );
         return;
       }
@@ -1638,9 +1816,49 @@ export default function App() {
 
     let uploadedMediaUrl = "";
     let uploadedThumbnailUrl = "";
+    let uploadedImageUrls: string[] = [];
+    let uploadedThumbnailUrls: string[] = [];
 
     try {
-      if (mediaUri) {
+      if (mediaType === "image" && imageUris?.length) {
+        setPostingStatus(
+          imageUris.length > 1
+            ? `🖼️ Uploading ${imageUris.length} photos...`
+            : "🖼️ Uploading photo..."
+        );
+
+        for (const [index, imageUri] of imageUris.entries()) {
+          setPostingStatus(
+            imageUris.length > 1
+              ? `🖼️ Uploading photo ${index + 1} of ${imageUris.length}...`
+              : "🖼️ Uploading photo..."
+          );
+          const [result, thumbnailResult] = await Promise.all([
+            uploadMediaToSupabase(imageUri, "image", {
+              width: 1600,
+              compress: 0.78,
+              maxBytes: FULL_IMAGE_MAX_BYTES,
+            }),
+            uploadMediaToSupabase(imageUri, "image", {
+              width: 720,
+              compress: 0.66,
+              maxBytes: THUMBNAIL_IMAGE_MAX_BYTES,
+            }),
+          ]);
+
+          if (!result || !thumbnailResult) {
+            setPostingStatus("");
+            alert("Image upload failed. Please try again.");
+            return;
+          }
+
+          uploadedImageUrls.push(result);
+          uploadedThumbnailUrls.push(thumbnailResult);
+        }
+
+        uploadedMediaUrl = uploadedImageUrls[0] || "";
+        uploadedThumbnailUrl = uploadedThumbnailUrls[0] || "";
+      } else if (mediaUri) {
         if (mediaType === "video") {
           setPostingStatus("🖼️ Preparing video thumbnail...");
           const thumbnailUri = await createVideoThumbnailUri(mediaUri, mediaDurationMs);
@@ -1654,6 +1872,7 @@ export default function App() {
           const thumbnailResult = await uploadMediaToSupabase(thumbnailUri, "image", {
             width: 640,
             compress: 0.54,
+            maxBytes: THUMBNAIL_IMAGE_MAX_BYTES,
             skipProcessing:
               Platform.OS === "web" && thumbnailUri.startsWith("data:image/"),
           });
@@ -1668,7 +1887,21 @@ export default function App() {
           setPostingStatus("🎥 Uploading compressed video...");
         }
 
-        const result = await uploadMediaToSupabase(mediaUri, mediaType);
+        const [result, imageThumbnailResult] =
+          mediaType === "image"
+            ? await Promise.all([
+                uploadMediaToSupabase(mediaUri, "image", {
+                  width: 1600,
+                  compress: 0.78,
+                  maxBytes: FULL_IMAGE_MAX_BYTES,
+                }),
+                uploadMediaToSupabase(mediaUri, "image", {
+                  width: 720,
+                  compress: 0.66,
+                  maxBytes: THUMBNAIL_IMAGE_MAX_BYTES,
+                }),
+              ])
+            : [await uploadMediaToSupabase(mediaUri, mediaType), null];
 
         if (!result) {
           setPostingStatus("");
@@ -1677,6 +1910,18 @@ export default function App() {
         }
 
         uploadedMediaUrl = result;
+
+        if (mediaType === "image") {
+          uploadedThumbnailUrl = imageThumbnailResult || result;
+        }
+      }
+
+      if (mediaType === "image" && uploadedMediaUrl && uploadedImageUrls.length === 0) {
+        uploadedImageUrls = [uploadedMediaUrl];
+      }
+
+      if (mediaType === "image" && uploadedThumbnailUrl && uploadedThumbnailUrls.length === 0) {
+        uploadedThumbnailUrls = [uploadedThumbnailUrl];
       }
 
       const postCoordinates = userCoordinates || (await getCurrentCoordinates());
@@ -1700,8 +1945,15 @@ export default function App() {
         location: selectedArea,
         postCoordinates,
         expiresAt: expiresAt || null,
+        imageUrl: uploadedMediaUrl,
         imageUri: uploadedMediaUrl,
-        imageThumbnailUri: mediaType === "image" ? uploadedMediaUrl : uploadedThumbnailUrl,
+        imageUris: uploadedImageUrls,
+        thumbnailUrl: uploadedThumbnailUrl,
+        thumbnailUrls: uploadedThumbnailUrls,
+        imageThumbnailUri:
+          mediaType === "image"
+            ? uploadedThumbnailUrl || uploadedMediaUrl
+            : uploadedThumbnailUrl,
         mediaType: mediaType || "",
         mediaKind: mediaKind || "post",
         mediaDurationMs: mediaDurationMs || null,
@@ -1918,8 +2170,6 @@ export default function App() {
 
   async function deletePost(postId: string) {
     try {
-      alert("Delete button clicked");
-
       await deleteDoc(doc(db, "posts", postId));
 
       alert("Post deleted");
@@ -1947,7 +2197,10 @@ export default function App() {
       type: "post",
       postId,
       postText: targetPost.text || "",
+      imageUrl: targetPost.imageUrl || targetPost.imageUri || "",
       imageUri: targetPost.imageUri || "",
+      thumbnailUrl:
+        targetPost.thumbnailUrl || targetPost.imageThumbnailUri || targetPost.imageUri || "",
       mediaType: targetPost.mediaType || "",
       postOwnerUid: targetPost.uid || "",
       postAuthor: targetPost.author || "",
@@ -2714,6 +2967,7 @@ export default function App() {
           currentUser={currentUser}
           username={username}
           startingUserId={startingMessageUserId}
+          onOpenUserProfile={openUserProfile}
         />
       )}
 
@@ -2752,20 +3006,10 @@ export default function App() {
               )}
 
               {report.imageUri && report.mediaType !== "video" && (
-                reportImagePreviewSources.get(report.id) ? (
-                  <Image
-                    source={reportImagePreviewSources.get(report.id)}
-                    style={{
-                      width: "100%",
-                      height: 220,
-                      borderRadius: 16,
-                      marginTop: 12,
-                      backgroundColor: "rgba(15, 23, 42, 0.30)",
-                    }}
-                    onLoad={() => devLog("[media] loaded report image", report.imageUri)}
-                    onError={() => devLog("[media] failed report image", report.imageUri)}
-                  />
-                ) : null
+                <AdminReportImagePreview
+                  thumbnailUri={report.thumbnailUrl || report.imageThumbnailUri}
+                  fullUri={report.imageUrl || report.imageUri}
+                />
               )}
 
 

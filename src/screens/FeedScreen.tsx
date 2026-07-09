@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native"; import { PostCard } from "../components/PostCard";
 import { styles } from "../styles";
 import { postCategories } from "../types";
@@ -108,6 +108,33 @@ function getCategoryEmoji(category: CategoryFilter) {
   return "📍";
 }
 
+function isSupabaseMediaUrl(uri?: string | null) {
+  return typeof uri === "string" && uri.includes(".supabase.co/storage/v1/");
+}
+
+function getFeedThumbnailUrls(post: Post) {
+  if (post.mediaType === "video") {
+    return [post.thumbnailUrl || post.imageThumbnailUri].filter(Boolean) as string[];
+  }
+
+  if (post.thumbnailUrls?.length) return post.thumbnailUrls;
+
+  return [post.thumbnailUrl].filter(Boolean) as string[];
+}
+
+function hasDedicatedThumbnail(post: Post) {
+  return post.mediaType === "video"
+    ? !!(post.thumbnailUrl || post.imageThumbnailUri)
+    : !!(post.thumbnailUrl || post.thumbnailUrls?.length);
+}
+
+function getRenderedFullSizeFallbackUrls(post: Post) {
+  if (hasDedicatedThumbnail(post)) return [];
+  if (post.mediaType === "video") return [];
+
+  return [post.imageUrl || post.imageUri || post.imageThumbnailUri].filter(Boolean) as string[];
+}
+
 export function FeedScreen({
   posts,
   hasMorePosts,
@@ -165,12 +192,46 @@ export function FeedScreen({
     return areaPosts;
   }, [posts, selectedArea, feedMode, categoryFilter, postSearch]);
 
+  useEffect(() => {
+    if (!__DEV__) return;
+
+    const initiallyRenderedPosts = filteredPosts.slice(0, 4);
+    const thumbnailUrlCount = initiallyRenderedPosts
+      .flatMap(getFeedThumbnailUrls)
+      .filter(isSupabaseMediaUrl).length;
+    const fullSizeFallbackUrlCount = initiallyRenderedPosts
+      .flatMap(getRenderedFullSizeFallbackUrls)
+      .filter(isSupabaseMediaUrl).length;
+    const totalSupabaseMediaUrlCount = thumbnailUrlCount + fullSizeFallbackUrlCount;
+
+    console.log(
+      `[media-audit] initial feed render: posts=${initiallyRenderedPosts.length}, thumbnails=${thumbnailUrlCount}, fullSizeFallbacks=${fullSizeFallbackUrlCount}`
+    );
+
+    if (fullSizeFallbackUrlCount > 0) {
+      console.warn(
+        `[media-audit] feed rendered ${fullSizeFallbackUrlCount} full-size fallback Supabase URL(s). Add thumbnailUrl/thumbnailUrls for those posts to reduce egress.`
+      );
+    }
+
+    if (totalSupabaseMediaUrlCount > 20) {
+      console.warn(
+        `[media-audit] initial feed rendered ${totalSupabaseMediaUrlCount} Supabase media URL(s), expected <= 20.`
+      );
+    }
+  }, [filteredPosts, selectedArea]);
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
         data={filteredPosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.feedList}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        removeClippedSubviews={true}
+        updateCellsBatchingPeriod={60}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefreshPosts} />
         }
@@ -411,8 +472,16 @@ export function FeedScreen({
         )}
       />
 
-      <Pressable style={styles.floatingButton} onPress={() => setTab("post")}>
-        <Text style={styles.floatingButtonText}>+</Text>
+      <Pressable
+        style={styles.floatingButton}
+        onPress={() => setTab("post")}
+        accessibilityRole="button"
+        accessibilityLabel="Create a post"
+        hitSlop={8}
+      >
+        <View style={styles.floatingButtonIcon}>
+          <Text style={styles.floatingButtonIconText}>+</Text>
+        </View>
       </Pressable>
     </View>
   );

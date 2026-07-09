@@ -18,8 +18,11 @@ import { postTypeOptions } from "../utils/postTypes";
 
 const REGULAR_VIDEO_MAX_SECONDS = 30;
 const TUTORIAL_VIDEO_MAX_SECONDS = 10 * 60;
-const REGULAR_VIDEO_MAX_BYTES = 80 * 1024 * 1024;
-const TUTORIAL_VIDEO_MAX_BYTES = 250 * 1024 * 1024;
+const REGULAR_VIDEO_MAX_BYTES = 40 * 1024 * 1024;
+const TUTORIAL_VIDEO_MAX_BYTES = 120 * 1024 * 1024;
+const IMAGE_SOURCE_MAX_BYTES = 25 * 1024 * 1024;
+const IMAGE_SOURCE_TOTAL_MAX_BYTES = 60 * 1024 * 1024;
+const MAX_POST_IMAGES = 5;
 const LONG_TEXT_FIELD_KEYS = [
   "description",
   "details",
@@ -54,7 +57,8 @@ type CreatePostScreenProps = {
     saleCondition?: string,
     expiresAt?: string,
     tags?: string[],
-    postFields?: PostFields
+    postFields?: PostFields,
+    imageUris?: string[]
   ) => Promise<void>;
   selectedArea: string;
 };
@@ -100,6 +104,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   const [text, setText] = useState("");
   const [postType, setPostType] = useState<PostType>("standard");
   const [mediaUri, setMediaUri] = useState<string | undefined>();
+  const [imageUris, setImageUris] = useState<string[]>([]);
   const [mediaType, setMediaType] = useState<MediaType | undefined>();
   const [mediaKind, setMediaKind] = useState<MediaKind>("post");
   const [mediaDurationMs, setMediaDurationMs] = useState<number | undefined>();
@@ -225,6 +230,9 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsMultipleSelection: true,
+      orderedSelection: true,
+      selectionLimit: MAX_POST_IMAGES,
       quality: mediaKind === "tutorial" ? 0.68 : 0.56,
       videoMaxDuration:
         mediaKind === "tutorial"
@@ -241,7 +249,18 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
     });
 
     if (!result.canceled) {
-      const asset = result.assets[0];
+      const assets = result.assets.slice(0, MAX_POST_IMAGES);
+
+      if (assets.length === 0) return;
+
+      const hasVideo = assets.some((selectedAsset) => selectedAsset.type === "video");
+
+      if (hasVideo && assets.length > 1) {
+        alert("Choose one video, or choose up to five photos.");
+        return;
+      }
+
+      const asset = assets[0];
       const selectedMediaType = asset.type === "video" ? "video" : "image";
       const videoDurationSeconds = (asset.duration ?? 0) / 1000;
       const maxDurationSeconds =
@@ -271,17 +290,57 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
           );
           return;
         }
+      } else {
+        const oversizedImage = assets.find(
+          (selectedAsset) =>
+            selectedAsset.type !== "video" &&
+            !!selectedAsset.fileSize &&
+            selectedAsset.fileSize > IMAGE_SOURCE_MAX_BYTES
+        );
+        const selectedImageBytes = assets.reduce(
+          (total, selectedAsset) =>
+            total + (selectedAsset.type !== "video" ? selectedAsset.fileSize ?? 0 : 0),
+          0
+        );
+
+        if (oversizedImage?.fileSize) {
+          alert(
+            `One photo is ${formatBytes(
+              oversizedImage.fileSize
+            )}. Choose photos under ${formatBytes(
+              IMAGE_SOURCE_MAX_BYTES
+            )}; CityPeak will compress them before upload.`
+          );
+          return;
+        }
+
+        if (selectedImageBytes > IMAGE_SOURCE_TOTAL_MAX_BYTES) {
+          alert(
+            `These photos are ${formatBytes(
+              selectedImageBytes
+            )} before compression. Choose fewer or smaller photos for this post.`
+          );
+          return;
+        }
       }
 
       setMediaUri(asset.uri);
       setMediaType(selectedMediaType);
       setMediaDurationMs(asset.duration ?? undefined);
       setMediaSizeBytes(asset.fileSize ?? undefined);
+      setImageUris(
+        selectedMediaType === "image"
+          ? assets
+              .filter((selectedAsset) => selectedAsset.type !== "video")
+              .map((selectedAsset) => selectedAsset.uri)
+          : []
+      );
     }
   }
 
   function resetMedia() {
     setMediaUri(undefined);
+    setImageUris([]);
     setMediaType(undefined);
     setMediaDurationMs(undefined);
     setMediaSizeBytes(undefined);
@@ -333,6 +392,14 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       const postText = text.trim();
       const postMediaUri = mediaUri;
       const postMediaType = mediaType;
+      const postImageUris =
+        mediaType === "image"
+          ? imageUris.length
+            ? imageUris
+            : mediaUri
+            ? [mediaUri]
+            : []
+          : [];
       const postCategory = category;
       const postPoll = pollDraft;
       const postMediaKind = mediaType === "video" ? mediaKind : "post";
@@ -353,6 +420,7 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       setText("");
       setPostType("standard");
       setMediaUri(undefined);
+      setImageUris([]);
       setMediaType(undefined);
       setMediaKind("post");
       setMediaDurationMs(undefined);
@@ -383,7 +451,8 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         postSaleCondition,
         postExpiresAt,
         postTags,
-        cleanPostFields
+        cleanPostFields,
+        postImageUris
       );
     } catch (error: any) {
       alert(error.message || "Something went wrong while posting.");
@@ -718,9 +787,6 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
           <Text style={styles.mediaLimitNumber}>10m</Text>
           <Text style={styles.mediaLimitLabel}>Tutorial max</Text>
         </View>
-        <View style={styles.mediaSavingsBadge}>
-          <Text style={styles.mediaSavingsText}>Thumbnail-first feed</Text>
-        </View>
       </View>
 
       <Pressable
@@ -730,15 +796,28 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       >
         <Text style={styles.secondaryButtonText}>
           {mediaUri
-            ? "Change Photo / Video"
+            ? mediaType === "image"
+              ? "Change Photos"
+              : "Change Video"
             : mediaKind === "tutorial"
               ? "Add Tutorial Video / Photo"
-              : "Add Photo / Video"}
+              : "Add Photos / Video"}
         </Text>
       </Pressable>
 
-      {mediaUri && mediaType === "image" && (
-        <Image source={{ uri: mediaUri }} style={styles.previewImage} />
+      {mediaType === "image" && imageUris.length > 0 && (
+        <View style={styles.imagePreviewGrid}>
+          {imageUris.map((uri, index) => (
+            <View key={`${uri}-${index}`} style={styles.imagePreviewTile}>
+              <Image source={{ uri }} style={styles.imagePreviewThumb} />
+              {imageUris.length > 1 && (
+                <View style={styles.imagePreviewBadge}>
+                  <Text style={styles.imagePreviewBadgeText}>{index + 1}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
       )}
 
       {mediaUri && mediaType === "video" && <VideoPreview uri={mediaUri} />}
@@ -763,7 +842,9 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
           disabled={uploading}
         >
           <Text style={styles.secondaryButtonText}>
-            Remove Photo / Video
+            {mediaType === "image" && imageUris.length > 1
+              ? "Remove Photos"
+              : "Remove Photo / Video"}
           </Text>
         </Pressable>
       )}

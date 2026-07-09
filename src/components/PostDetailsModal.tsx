@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { PollCard } from "./PollCard";
 import { styles } from "../styles";
@@ -62,6 +62,28 @@ export function PostDetailsModal({
     setPollOptions(["", ""]);
   }, [post]);
 
+  const imageSources = useMemo(() => {
+    if (!localPost || localPost.mediaType === "video") return [];
+
+    const urls =
+      localPost.imageUris?.length
+        ? localPost.imageUris
+        : [localPost.imageUrl || localPost.imageUri].filter(Boolean);
+
+    return urls
+      .map((uri, index) =>
+        getStableImageSource(uri, `post ${localPost.id} detail image ${index + 1}`)
+      )
+      .filter((source): source is { uri: string } => !!source);
+  }, [
+    localPost?.id,
+    localPost?.imageThumbnailUri,
+    localPost?.imageUrl,
+    localPost?.imageUri,
+    localPost?.imageUris,
+    localPost?.mediaType,
+  ]);
+
   if (!localPost) return null;
 
   const activePost = localPost;
@@ -73,7 +95,7 @@ export function PostDetailsModal({
   const detailImageSource = getStableImageSource(
     localPost.mediaType === "video"
       ? undefined
-      : localPost.imageThumbnailUri || localPost.imageUri,
+      : localPost.imageUrl || localPost.imageUri || localPost.imageThumbnailUri,
     `post ${localPost.id} detail image`
   );
   const previewImageSource = getStableImageSource(
@@ -543,7 +565,41 @@ export function PostDetailsModal({
                 </View>
               )}
 
-              {!!detailImageSource && localPost.mediaType !== "video" && (
+              {imageSources.length > 1 && localPost.mediaType !== "video" && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={[styles.postImageGallery, { marginTop: 12, marginBottom: 0 }]}
+                  contentContainerStyle={styles.postImageGalleryContent}
+                >
+                  {imageSources.map((source, index) => (
+                    <Pressable
+                      key={`${source.uri}-${index}`}
+                      style={[styles.postImageGalleryItem, { height: 300 }]}
+                      onPress={() => setImagePreviewUri(source.uri)}
+                    >
+                      <Image
+                        source={source}
+                        style={styles.postImageGalleryPhoto}
+                        resizeMode="cover"
+                        onLoad={() =>
+                          devLog("[media] loaded post detail gallery image", source.uri)
+                        }
+                        onError={() =>
+                          devLog("[media] failed post detail gallery image", source.uri)
+                        }
+                      />
+                      <View style={styles.postImageCountBadge}>
+                        <Text style={styles.postImageCountText}>
+                          {index + 1}/{imageSources.length}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+
+              {imageSources.length <= 1 && !!detailImageSource && localPost.mediaType !== "video" && (
                 <Pressable
                   onPress={() => {
                     if (detailImageSource?.uri) {

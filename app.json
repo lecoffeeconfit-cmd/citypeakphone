@@ -30,6 +30,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CityPeak to access your photos so you can add images and videos to local posts and your profile."
+        }
+      ],
       "expo-video",
       [
         "expo-notifications",

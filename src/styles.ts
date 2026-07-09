@@ -891,6 +891,48 @@ export const styles = StyleSheet.create({
   backgroundColor: "rgba(15, 23, 42, 0.24)",
 },
 
+  postImageGallery: {
+    marginBottom: 15,
+  },
+
+  postImageGalleryContent: {
+    gap: 10,
+    paddingRight: 4,
+  },
+
+  postImageGalleryItem: {
+    width: 290,
+    height: 320,
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 23, 42, 0.24)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.18)",
+  },
+
+  postImageGalleryPhoto: {
+    width: "100%",
+    height: "100%",
+  },
+
+  postImageCountBadge: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+  },
+
+  postImageCountText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
   reactionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -948,20 +990,38 @@ export const styles = StyleSheet.create({
   floatingButton: {
     position: "absolute",
     right: 22,
-    bottom: 102,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F58A00",
+    bottom: 100,
+    width: 68,
+    height: 68,
+    borderRadius: 999,
+    backgroundColor: "#F59E0B",
+    borderWidth: 1,
+    borderColor: "rgba(254, 243, 199, 0.78)",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#F59E0B",
+    shadowOpacity: 0.38,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
   },
 
-  floatingButtonText: {
-    color: "#1E293B",
+  floatingButtonIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+  },
+
+  floatingButtonIconText: {
+    color: "#FBBF24",
     fontSize: 38,
-    fontWeight: "800",
-    marginTop: -4,
+    fontWeight: "900",
+    marginTop: -5,
   },
 
   screen: {
@@ -1188,23 +1248,64 @@ export const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  mediaSavingsBadge: {
-    backgroundColor: "rgba(50, 155, 184, 0.18)",
+  messageProfileHeader: {
+    ...glassPanel,
     borderWidth: 1,
-    borderColor: "rgba(134, 181, 207, 0.42)",
-    borderRadius: 18,
-    minHeight: 58,
-    flexGrow: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    borderRadius: 22,
+    padding: 12,
+    marginTop: 16,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 12,
   },
 
-  mediaSavingsText: {
-    color: "#BAE6FD",
+  messageUserRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  messageProfileAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: "#329BB8",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  messageProfileAvatarText: {
+    color: "#0F172A",
     fontWeight: "900",
-    textAlign: "center",
+    fontSize: 17,
+  },
+
+  messageProfileName: {
+    color: "#FFFFFF",
+    fontSize: 21,
+    fontWeight: "900",
+  },
+
+  messageProfileHint: {
+    color: "#86B5CF",
+    fontWeight: "900",
+    marginTop: 2,
+  },
+
+  messageProfilePill: {
+    ...glassAccent,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
+    flexShrink: 0,
+  },
+
+  messageProfilePillText: {
+    color: "#BAE6FD",
+    fontSize: 12,
+    fontWeight: "900",
   },
 
   mediaInfoCard: {
@@ -1261,6 +1362,47 @@ export const styles = StyleSheet.create({
     borderRadius: 24,
     marginTop: 14,
     backgroundColor: "#E5E7EB",
+  },
+
+  imagePreviewGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 14,
+  },
+
+  imagePreviewTile: {
+    width: "31%",
+    aspectRatio: 1,
+    minWidth: 96,
+    borderRadius: 18,
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 23, 42, 0.30)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.24)",
+  },
+
+  imagePreviewThumb: {
+    width: "100%",
+    height: "100%",
+  },
+
+  imagePreviewBadge: {
+    position: "absolute",
+    right: 7,
+    top: 7,
+    width: 24,
+    height: 24,
+    borderRadius: 999,
+    backgroundColor: "rgba(15, 23, 42, 0.86)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  imagePreviewBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "900",
   },
 
   smallTitle: {
@@ -1408,29 +1550,152 @@ export const styles = StyleSheet.create({
     color: "#BAE6FD",
   },
 
-  blockProfileButton: {
-    ...glassInset,
+  profileBioFollowButton: {
+    backgroundColor: "#329BB8",
     borderWidth: 1,
+    borderColor: "#86B5CF",
     borderRadius: 18,
     paddingVertical: 13,
-    paddingHorizontal: 16,
-    marginTop: 10,
+    paddingHorizontal: 18,
+    marginTop: 14,
+    alignSelf: "stretch",
     alignItems: "center",
   },
 
-  blockProfileButtonActive: {
-    backgroundColor: "rgba(22, 101, 52, 0.28)",
+  profileBioFollowButtonActive: {
+    backgroundColor: "rgba(15, 23, 42, 0.34)",
+  },
+
+  profileBioFollowButtonText: {
+    color: "#0F172A",
+    fontSize: 16,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+
+  profileBioFollowButtonTextActive: {
+    color: "#BAE6FD",
+  },
+
+  blockProfileActionCard: {
+    backgroundColor: "rgba(69, 10, 10, 0.72)",
+    borderRadius: 24,
+    padding: 18,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: "#991B1B",
+    gap: 16,
+  },
+
+  blockProfileContentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+
+  blockProfileActionCardActive: {
+    backgroundColor: "rgba(20, 83, 45, 0.66)",
+    borderColor: "rgba(22, 163, 74, 0.78)",
+  },
+
+  blockProfileIconBox: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    backgroundColor: "rgba(107, 31, 31, 0.68)",
+    borderWidth: 1,
+    borderColor: "#991B1B",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  blockProfileIconBoxActive: {
+    backgroundColor: "rgba(22, 101, 52, 0.58)",
     borderColor: "rgba(134, 239, 172, 0.48)",
   },
 
-  blockProfileButtonText: {
+  blockProfileIconText: {
     color: "#FCA5A5",
+    fontSize: 28,
+    fontWeight: "900",
+  },
+
+  blockProfileIconTextActive: {
+    color: "#BBF7D0",
+  },
+
+  blockProfileTextBlock: {
+    flex: 1,
+    paddingTop: 2,
+  },
+
+  blockProfileKicker: {
+    color: "#FCA5A5",
+    fontSize: 11,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
+
+  blockProfileKickerActive: {
+    color: "#BBF7D0",
+  },
+
+  blockProfileTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 3,
+  },
+
+  blockProfileSubtitle: {
+    color: "#FECACA",
+    fontWeight: "800",
+    marginTop: 4,
+    lineHeight: 20,
+  },
+
+  blockProfileSubtitleActive: {
+    color: "#DCFCE7",
+  },
+
+  blockProfileButton: {
+    backgroundColor: "#DC2626",
+    borderRadius: 999,
+    minHeight: 54,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: "rgba(254, 202, 202, 0.42)",
+    shadowColor: "#7F1D1D",
+    shadowOpacity: 0.34,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  blockProfileButtonPillActive: {
+    backgroundColor: "#16A34A",
+    borderColor: "rgba(187, 247, 208, 0.48)",
+    shadowColor: "#14532D",
+  },
+
+  blockProfileButtonBusy: {
+    shadowOpacity: 0.16,
+  },
+
+  blockProfileButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "900",
     textAlign: "center",
   },
 
   blockProfileButtonTextActive: {
-    color: "#BBF7D0",
+    color: "#FFFFFF",
   },
 
   statsRow: {
@@ -1454,7 +1719,7 @@ statNumber: {
   fontSize: 18,
 },
 
-statLabel: {
+  statLabel: {
   color: "#CBD5E1",
   fontSize: 12,
   marginTop: 3,
@@ -1469,6 +1734,13 @@ statLabel: {
     borderRadius: 22,
     padding: 16,
     marginTop: 18,
+  },
+
+  postAuthorProfileHint: {
+    color: "#86B5CF",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 3,
   },
 
   analyticsKicker: {
