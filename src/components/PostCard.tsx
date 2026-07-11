@@ -40,7 +40,7 @@ function PostVideo({
   controls?: boolean;
   shouldPlay?: boolean;
 }) {
-  const player = useVideoPlayer(uri, (player) => {
+  const player = useVideoPlayer({ uri, useCaching: true }, (player) => {
     player.loop = true;
     player.muted = true;
   });

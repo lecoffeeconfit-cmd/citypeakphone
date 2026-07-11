@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CityPeakPhone",
+    "name": "CityPeak",
     "slug": "CityPeakPhone",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,6 +8,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0F172A"
     },
@@ -33,7 +34,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow CityPeak to access your photos so you can add images and videos to local posts and your profile."
+          "photosPermission": "Allow CityPeak to access your photos so you can add images and videos to local posts and your profile.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       "expo-video",
@@ -53,10 +56,19 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/splash-icon.png",
           "backgroundColor": "#0F172A",
           "dark": {
             "backgroundColor": "#0F172A"
           }
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "citypeak",
+          "organization": "lecoffeeconfit"
         }
       ]
     ],

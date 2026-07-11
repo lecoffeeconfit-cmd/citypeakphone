@@ -70,6 +70,23 @@ import type {
 } from "./src/types";
 import { devLog, getStableImageSource, normalizeMediaUri } from "./src/utils/media";
 import { countUsage } from "./src/utils/usageAudit";
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://71ac6592333e6561f5d9864137d9f0bd@o4511657628008448.ingest.us.sentry.io/4511713519206400',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: false,
+
+  // Enable Logs
+  enableLogs: false,
+
+  
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
+
 
 type PublicUserProfile = {
   uid: string;
@@ -143,6 +160,11 @@ const TUTORIAL_VIDEO_MAX_BYTES = 120 * 1024 * 1024;
 const FULL_IMAGE_MAX_BYTES = 1400 * 1024;
 const THUMBNAIL_IMAGE_MAX_BYTES = 250 * 1024;
 const PROFILE_IMAGE_MAX_BYTES = 180 * 1024;
+
+function showActionFailure(context: string, error: unknown, message: string) {
+  devLog(`[${context}] action failed`, error);
+  alert(message);
+}
 
 type ImageUploadOptions = {
   width?: number;
@@ -289,6 +311,8 @@ function OnboardingScreen({
         interests,
         notificationPreferences: finalPrefs,
       });
+    } catch (error) {
+      showActionFailure("onboarding", error, "Your setup could not be saved. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -779,7 +803,7 @@ function PublicUserProfileModal({
 }
 
 function AdminLoadedVideo({ uri }: { uri: string }) {
-  const player = useVideoPlayer(uri, (player) => {
+  const player = useVideoPlayer({ uri, useCaching: true }, (player) => {
     player.loop = false;
   });
 
@@ -898,14 +922,14 @@ function AdminReportImagePreview({
     </View>
   );
 }
-export default function App() {
+export default Sentry.wrap(function App() {
   const [tab, setTab] = useState<Tab>("feed");
   const [selectedArea, setSelectedArea] = useState("Long Beach");
   const [search, setSearch] = useState("");
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(true);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notificationPreferences, setNotificationPreferences] =
     useState<NotificationPreferences>(defaultNotificationPreferences);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -939,16 +963,24 @@ export default function App() {
   const publicProfileCacheRef = useRef(
     new Map<string, { profile: PublicUserProfile; loadedAt: number }>()
   );
+  const isPostDataTab = tab === "feed" || tab === "search" || tab === "profile";
 
   useEffect(() => {
     countUsage("listener-create:auth");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       countUsage("auth-snapshot");
       setCurrentUser(user);
-      setFirebaseReady(true);
 
       if (user) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userDoc = await getDoc(doc(db, "users", user.uid)).catch((error) => {
+          showActionFailure("auth-profile", error, "Your profile could not be loaded. Check your connection and try again.");
+          return null;
+        });
+
+        if (!userDoc) {
+          setFirebaseReady(true);
+          return;
+        }
 
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -999,6 +1031,8 @@ export default function App() {
         setCurrentFollowingIds([]);
         setFollowingUsers([]);
       }
+
+      setFirebaseReady(true);
     });
 
     return () => {
@@ -1098,6 +1132,7 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser?.uid) return;
+    if (!hasCompletedOnboarding || tab !== "feed") return;
 
     let canceled = false;
 
@@ -1114,7 +1149,7 @@ export default function App() {
     return () => {
       canceled = true;
     };
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, hasCompletedOnboarding, tab]);
 
   async function getCurrentCoordinates(): Promise<Coordinates | null> {
     try {
@@ -1146,7 +1181,7 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser?.uid) return;
-    if (!["feed", "search", "profile"].includes(tab)) return;
+    if (!isPostDataTab) return;
 
     countUsage("listener-create:feed-posts", { feedLimit, feedRefreshNonce });
     const q = query(
@@ -1188,7 +1223,7 @@ export default function App() {
       countUsage("listener-cleanup:feed-posts", { feedLimit, feedRefreshNonce });
       unsubscribe();
     };
-  }, [currentUser?.uid, feedLimit, feedRefreshNonce, tab]);
+  }, [currentUser?.uid, feedLimit, feedRefreshNonce, isPostDataTab]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -1303,8 +1338,7 @@ export default function App() {
         setReports(loadedReports);
       },
       (error) => {
-        console.error("REPORT LISTENER ERROR:", error);
-        alert("Reports listener error: " + error.message);
+        showActionFailure("admin-reports", error, "Reports could not be loaded. Check your connection and admin access.");
       }
     );
 
@@ -1590,10 +1624,11 @@ export default function App() {
     newUsername: string,
     newBio: string,
     imageUri?: string
-  ) {
-    if (!currentUser) return;
+  ): Promise<boolean> {
+    if (!currentUser) return false;
 
-    let uploadedPhotoUrl = photoUrl;
+    try {
+      let uploadedPhotoUrl = photoUrl;
 
     if (imageUri) {
       const result = await uploadMediaToSupabase(imageUri, "image", {
@@ -1602,9 +1637,8 @@ export default function App() {
         maxBytes: PROFILE_IMAGE_MAX_BYTES,
       });
 
-      if (result) {
+        if (!result) return false;
         uploadedPhotoUrl = result;
-      }
     }
 
     const cleanedUsername =
@@ -1630,7 +1664,12 @@ export default function App() {
     setBio(newBio.trim());
     setPhotoUrl(uploadedPhotoUrl);
 
-    alert("Profile saved!");
+      alert("Profile saved!");
+      return true;
+    } catch (error) {
+      showActionFailure("profile", error, "Your profile could not be saved. Please check your connection and try again.");
+      return false;
+    }
   }
 
   async function enableNotifications(
@@ -1746,14 +1785,19 @@ export default function App() {
 
     setNotificationPreferences(nextPreferences);
 
-    await setDoc(
-      doc(db, "users", currentUser.uid),
-      {
-        notificationPreferences: nextPreferences,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+    try {
+      await setDoc(
+        doc(db, "users", currentUser.uid),
+        {
+          notificationPreferences: nextPreferences,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      setNotificationPreferences(notificationPreferences);
+      showActionFailure("notifications", error, "This notification setting could not be saved.");
+    }
   }
 
   async function addPost(
@@ -1773,12 +1817,12 @@ export default function App() {
     tags?: string[],
     postFields?: PostFields,
     imageUris?: string[]
-  ) {
-    if (!currentUser) return;
+  ): Promise<boolean> {
+    if (!currentUser) return false;
 
     if (!category) {
       alert("Please choose a category.");
-      return;
+      return false;
     }
 
     if (mediaType === "video") {
@@ -1793,7 +1837,7 @@ export default function App() {
             ? "Tutorial videos can be up to 10 minutes."
             : "Regular post videos can be up to 30 seconds."
         );
-        return;
+        return false;
       }
 
       if (mediaSizeBytes && mediaSizeBytes > maxBytes) {
@@ -1802,7 +1846,7 @@ export default function App() {
             maxBytes / (1024 * 1024)
           )} MB or less.`
         );
-        return;
+        return false;
       }
     }
 
@@ -1811,8 +1855,6 @@ export default function App() {
         ? "🎥 Posting your video..."
         : "📝 Posting..."
     );
-
-    setTab("feed");
 
     let uploadedMediaUrl = "";
     let uploadedThumbnailUrl = "";
@@ -1849,7 +1891,7 @@ export default function App() {
           if (!result || !thumbnailResult) {
             setPostingStatus("");
             alert("Image upload failed. Please try again.");
-            return;
+            return false;
           }
 
           uploadedImageUrls.push(result);
@@ -1866,7 +1908,7 @@ export default function App() {
           if (!thumbnailUri) {
             setPostingStatus("");
             alert("We couldn't create a video thumbnail. Please choose another video.");
-            return;
+            return false;
           }
 
           const thumbnailResult = await uploadMediaToSupabase(thumbnailUri, "image", {
@@ -1880,7 +1922,7 @@ export default function App() {
           if (!thumbnailResult) {
             setPostingStatus("");
             alert("Video thumbnail upload failed. Please try again.");
-            return;
+            return false;
           }
 
           uploadedThumbnailUrl = thumbnailResult;
@@ -1906,7 +1948,7 @@ export default function App() {
         if (!result) {
           setPostingStatus("");
           alert("Media upload failed. Please try again.");
-          return;
+          return false;
         }
 
         uploadedMediaUrl = result;
@@ -1978,6 +2020,7 @@ export default function App() {
         createdAt: serverTimestamp(),
       });
 
+      setTab("feed");
       setPostingStatus("✅ Posted!");
 
       if (postingStatusTimeoutRef.current) {
@@ -1987,9 +2030,11 @@ export default function App() {
       postingStatusTimeoutRef.current = setTimeout(() => {
         setPostingStatus("");
       }, 2500);
+      return true;
     } catch (error: any) {
       setPostingStatus("");
       alert(error.message || "Post failed.");
+      return false;
     }
   }
 
@@ -2020,10 +2065,14 @@ export default function App() {
 
     nextReactions[reaction] = (nextReactions[reaction] ?? 0) + 1;
 
-    await updateDoc(doc(db, "posts", postId), {
-      reactions: nextReactions,
-      [`reactedBy.${currentUser.uid}`]: reaction,
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), {
+        reactions: nextReactions,
+        [`reactedBy.${currentUser.uid}`]: reaction,
+      });
+    } catch (error) {
+      showActionFailure("reactions", error, "Your reaction could not be saved. Please try again.");
+    }
   }
 
   async function voteOnPoll(postId: string, optionId: string) {
@@ -2054,10 +2103,14 @@ export default function App() {
       return option;
     });
 
-    await updateDoc(doc(db, "posts", postId), {
-      "poll.options": nextOptions,
-      [`poll.votedBy.${currentUser.uid}`]: optionId,
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), {
+        "poll.options": nextOptions,
+        [`poll.votedBy.${currentUser.uid}`]: optionId,
+      });
+    } catch (error) {
+      showActionFailure("polls", error, "Your vote could not be saved. Please try again.");
+    }
   }
 
   async function addPollToPost(
@@ -2082,17 +2135,21 @@ export default function App() {
       return;
     }
 
-    await updateDoc(doc(db, "posts", postId), {
-      poll: {
-        question: cleanedQuestion,
-        options: cleanedOptions.map((option, index) => ({
-          id: `${Date.now()}-${index}`,
-          text: option,
-          votes: 0,
-        })),
-        votedBy: {},
-      },
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), {
+        poll: {
+          question: cleanedQuestion,
+          options: cleanedOptions.map((option, index) => ({
+            id: `${Date.now()}-${index}`,
+            text: option,
+            votes: 0,
+          })),
+          votedBy: {},
+        },
+      });
+    } catch (error) {
+      showActionFailure("polls", error, "The poll could not be added. Please try again.");
+    }
   }
 
   async function openPostWithView(post: Post) {
@@ -2102,10 +2159,14 @@ export default function App() {
       return;
     }
 
-    await updateDoc(doc(db, "posts", post.id), {
-      "engagement.views": increment(1),
-      [`viewedBy.${currentUser.uid}`]: true,
-    });
+    try {
+      await updateDoc(doc(db, "posts", post.id), {
+        "engagement.views": increment(1),
+        [`viewedBy.${currentUser.uid}`]: true,
+      });
+    } catch (error) {
+      devLog("[engagement] view update failed", error);
+    }
   }
 
   async function savePost(postId: string) {
@@ -2115,6 +2176,7 @@ export default function App() {
 
     if (!targetPost) return;
 
+    try {
     if (targetPost.savedBy?.[currentUser.uid]) {
       await updateDoc(doc(db, "posts", postId), {
         "engagement.saves": increment(-1),
@@ -2128,12 +2190,16 @@ export default function App() {
       "engagement.saves": increment(1),
       [`savedBy.${currentUser.uid}`]: true,
     });
+    } catch (error) {
+      showActionFailure("saved-posts", error, "This post could not be updated. Please try again.");
+    }
   }
 
   async function sharePost(post: Post) {
     if (!currentUser?.uid) return;
 
     const title = post.saleTitle || post.poll?.question || post.text || "CityPeak post";
+    try {
     const result = await Share.share({
       message: `${title}\n\nPosted in ${post.location} on CityPeak.`,
     });
@@ -2143,6 +2209,9 @@ export default function App() {
     await updateDoc(doc(db, "posts", post.id), {
       "engagement.shares": increment(1),
     });
+    } catch (error) {
+      showActionFailure("sharing", error, "This post could not be shared. Please try again.");
+    }
   }
 
   async function updatePostDetails(
@@ -2155,17 +2224,23 @@ export default function App() {
       salePrice?: string;
       saleCondition?: string;
     }
-  ) {
+  ): Promise<boolean> {
     const targetPost =
       posts.find((post) => post.id === postId) ||
       profilePosts.find((post) => post.id === postId);
 
     if (!currentUser?.uid || targetPost?.uid !== currentUser.uid) {
       alert("You can only edit your own posts.");
-      return;
+      return false;
     }
 
-    await updateDoc(doc(db, "posts", postId), updates);
+    try {
+      await updateDoc(doc(db, "posts", postId), updates);
+      return true;
+    } catch (error) {
+      showActionFailure("posts", error, "Your post changes could not be saved. Please try again.");
+      return false;
+    }
   }
 
   async function deletePost(postId: string) {
@@ -2193,7 +2268,8 @@ export default function App() {
       return;
     }
 
-    await addDoc(collection(db, "reports"), {
+    try {
+      await addDoc(collection(db, "reports"), {
       type: "post",
       postId,
       postText: targetPost.text || "",
@@ -2209,9 +2285,12 @@ export default function App() {
       reason,
       status: "open",
       createdAt: serverTimestamp(),
-    });
+      });
 
-    alert("Report submitted. Thank you for helping keep CityPeak safe.");
+      alert("Report submitted. Thank you for helping keep CityPeak safe.");
+    } catch (error) {
+      showActionFailure("reports", error, "Your report could not be submitted. Please try again.");
+    }
   }
 
   async function reportComment(postId: string, commentId: string, reason: string) {
@@ -2238,7 +2317,8 @@ export default function App() {
       return;
     }
 
-    await addDoc(collection(db, "reports"), {
+    try {
+      await addDoc(collection(db, "reports"), {
       type: "comment",
       postId,
       commentId,
@@ -2250,9 +2330,12 @@ export default function App() {
       reason,
       status: "open",
       createdAt: serverTimestamp(),
-    });
+      });
 
-    alert("Comment report submitted.");
+      alert("Comment report submitted.");
+    } catch (error) {
+      showActionFailure("reports", error, "This comment report could not be submitted. Please try again.");
+    }
   }
 
   async function deleteComment(postId: string, commentId: string) {
@@ -2287,17 +2370,18 @@ export default function App() {
       (comment) => comment.id !== commentId
     );
 
-    await updateDoc(doc(db, "posts", postId), {
-      comments: updatedComments,
-    });
-
-    alert("Comment deleted.");
+    try {
+      await updateDoc(doc(db, "posts", postId), { comments: updatedComments });
+      alert("Comment deleted.");
+    } catch (error) {
+      showActionFailure("comments", error, "This comment could not be deleted. Please try again.");
+    }
   }
 
 
 
-  async function addComment(postId: string, text: string) {
-    if (!currentUser) return;
+  async function addComment(postId: string, text: string): Promise<boolean> {
+    if (!currentUser) return false;
 
     const newComment: Comment = {
       id: Date.now().toString(),
@@ -2315,9 +2399,13 @@ export default function App() {
 
     const postRef = doc(db, "posts", postId);
 
-    await updateDoc(postRef, {
-      comments: arrayUnion(newComment),
-    });
+    try {
+      await updateDoc(postRef, { comments: arrayUnion(newComment) });
+      return true;
+    } catch (error) {
+      showActionFailure("comments", error, "Your comment could not be posted. Please try again.");
+      return false;
+    }
   }
 
   function updateNestedCommentReaction(
@@ -2397,9 +2485,11 @@ export default function App() {
       "like"
     );
 
-    await updateDoc(doc(db, "posts", postId), {
-      comments: updatedComments,
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), { comments: updatedComments });
+    } catch (error) {
+      showActionFailure("comments", error, "Your reaction could not be saved. Please try again.");
+    }
   }
 
   async function dislikeComment(postId: string, commentId: string) {
@@ -2415,9 +2505,11 @@ export default function App() {
       "dislike"
     );
 
-    await updateDoc(doc(db, "posts", postId), {
-      comments: updatedComments,
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), { comments: updatedComments });
+    } catch (error) {
+      showActionFailure("comments", error, "Your reaction could not be saved. Please try again.");
+    }
   }
 
   function addNestedReply(
@@ -2444,11 +2536,11 @@ export default function App() {
     postId: string,
     commentId: string,
     text: string
-  ) {
-    if (!currentUser) return;
+  ): Promise<boolean> {
+    if (!currentUser) return false;
 
     const targetPost = posts.find((post) => post.id === postId);
-    if (!targetPost) return;
+    if (!targetPost) return false;
 
     const newReply: Comment = {
       id: Date.now().toString(),
@@ -2470,9 +2562,13 @@ export default function App() {
       newReply
     );
 
-    await updateDoc(doc(db, "posts", postId), {
-      comments: updatedComments,
-    });
+    try {
+      await updateDoc(doc(db, "posts", postId), { comments: updatedComments });
+      return true;
+    } catch (error) {
+      showActionFailure("comments", error, "Your reply could not be posted. Please try again.");
+      return false;
+    }
   }
 
   function startMessageFromPost(post: Post) {
@@ -2495,8 +2591,34 @@ export default function App() {
     setTab("messages");
   }
 
+  async function deleteReportedPost(postId?: string) {
+    if (!isAdmin || !postId) return;
+    try {
+      await deleteDoc(doc(db, "posts", postId));
+      alert("Reported post deleted.");
+    } catch (error) {
+      showActionFailure("admin", error, "The reported post could not be deleted.");
+    }
+  }
+
+  async function markReportReviewed(reportId: string) {
+    if (!isAdmin) return;
+    try {
+      await updateDoc(doc(db, "reports", reportId), {
+        status: "reviewed",
+        reviewedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      showActionFailure("admin", error, "This report could not be marked as reviewed.");
+    }
+  }
+
   async function handleLogout() {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      showActionFailure("auth", error, "You could not be logged out. Please try again.");
+    }
   }
 
   async function cleanupAccountData(userId: string) {
@@ -3016,19 +3138,14 @@ export default function App() {
 
               <Pressable
                 style={[styles.logoutButton, { marginTop: 12 }]}
-                onPress={() => deleteDoc(doc(db, "posts", report.postId))}
+                onPress={() => deleteReportedPost(report.postId)}
               >
                 <Text style={styles.logoutButtonText}>Delete Post</Text>
               </Pressable>
 
               <Pressable
                 style={[styles.primaryButton, { marginTop: 10 }]}
-                onPress={() =>
-                  updateDoc(doc(db, "reports", report.id), {
-                    status: "reviewed",
-                    reviewedAt: serverTimestamp(),
-                  })
-                }
+                onPress={() => markReportReviewed(report.id)}
               >
                 <Text style={styles.primaryButtonText}>Mark Reviewed</Text>
               </Pressable>
@@ -3062,7 +3179,7 @@ export default function App() {
             onSaveProfile={saveProfile}
             onUpdatePost={updatePostDetails}
             onOpenPost={openPostWithView}
-            onLogout={() => signOut(auth)}
+            onLogout={handleLogout}
             onDeleteAccount={deleteAccount}
           />
 
@@ -3113,4 +3230,4 @@ export default function App() {
       />
     </SafeAreaView>
   );
-}
+});

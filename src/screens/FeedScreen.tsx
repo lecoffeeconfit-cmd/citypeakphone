@@ -53,6 +53,7 @@ const categoryColors: Record<string, string> = {
   "Careers & Jobs": "#F8B400",
   Sports: "#F58A00",
   Events: "#86B5CF",
+  "Pets & Animals": "#8B5CF6",
 };
 
 function hexToRgba(hex: string, alpha: number) {
@@ -105,6 +106,7 @@ function getCategoryEmoji(category: CategoryFilter) {
   if (category === "Careers & Jobs") return "💼";
   if (category === "Sports") return "🏀";
   if (category === "Events") return "📈";
+  if (category === "Pets & Animals") return "🐾";
   return "📍";
 }
 

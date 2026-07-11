@@ -59,7 +59,7 @@ type CreatePostScreenProps = {
     tags?: string[],
     postFields?: PostFields,
     imageUris?: string[]
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   selectedArea: string;
 };
 
@@ -221,9 +221,9 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
   }
 
   async function pickMedia() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => null);
 
-    if (!permission.granted) {
+    if (!permission?.granted) {
       alert("Permission to access photos and videos is required.");
       return;
     }
@@ -246,7 +246,12 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         mediaKind === "tutorial"
           ? ImagePicker.UIImagePickerControllerQualityType.IFrame960x540
           : ImagePicker.UIImagePickerControllerQualityType.VGA640x480,
-    });
+    }).catch(() => null);
+
+    if (!result) {
+      alert("Your photo library could not be opened. Please try again.");
+      return;
+    }
 
     if (!result.canceled) {
       const assets = result.assets.slice(0, MAX_POST_IMAGES);
@@ -417,6 +422,27 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
         .slice(0, 5);
       const cleanPostFields = getCleanPostFields();
 
+      const posted = await addPost(
+        postText,
+        postMediaUri,
+        postMediaType,
+        postCategory,
+        postPoll,
+        postMediaKind,
+        postMediaDurationMs,
+        postMediaSizeBytes,
+        nextPostType,
+        postSaleTitle,
+        postSalePrice,
+        postSaleCondition,
+        postExpiresAt,
+        postTags,
+        cleanPostFields,
+        postImageUris
+      );
+
+      if (!posted) return;
+
       setText("");
       setPostType("standard");
       setMediaUri(undefined);
@@ -435,25 +461,6 @@ export function CreatePostScreen({ addPost, selectedArea }: CreatePostScreenProp
       setExpiresAt("");
       setTagsText("");
       setPostFields({});
-
-      await addPost(
-        postText,
-        postMediaUri,
-        postMediaType,
-        postCategory,
-        postPoll,
-        postMediaKind,
-        postMediaDurationMs,
-        postMediaSizeBytes,
-        nextPostType,
-        postSaleTitle,
-        postSalePrice,
-        postSaleCondition,
-        postExpiresAt,
-        postTags,
-        cleanPostFields,
-        postImageUris
-      );
     } catch (error: any) {
       alert(error.message || "Something went wrong while posting.");
     } finally {

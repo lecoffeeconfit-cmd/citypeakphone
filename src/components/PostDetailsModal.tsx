@@ -13,10 +13,10 @@ type PostDetailsModalProps = {
   post: Post | null;
   onClose: () => void;
   onReact: (postId: string, reaction: ReactionKey) => void;
-  onAddComment: (postId: string, text: string) => void;
+  onAddComment: (postId: string, text: string) => Promise<boolean>;
   onLikeComment: (postId: string, commentId: string) => void;
   onDislikeComment: (postId: string, commentId: string) => void;
-  onAddReply: (postId: string, commentId: string, text: string) => void;
+  onAddReply: (postId: string, commentId: string, text: string) => Promise<boolean>;
   currentUserId?: string;
   onDeletePost?: (postId: string) => void;
   onReportPost?: (postId: string, reason: string) => void;
@@ -62,26 +62,38 @@ export function PostDetailsModal({
     setPollOptions(["", ""]);
   }, [post]);
 
+  const fullImageUrls = useMemo(() => {
+    if (!localPost || localPost.mediaType === "video") return [];
+
+    return (
+      localPost.imageUris?.length
+        ? localPost.imageUris
+        : [localPost.imageUrl || localPost.imageUri].filter(Boolean)
+    ) as string[];
+  }, [localPost?.imageUrl, localPost?.imageUri, localPost?.imageUris, localPost?.mediaType]);
+
   const imageSources = useMemo(() => {
     if (!localPost || localPost.mediaType === "video") return [];
 
-    const urls =
-      localPost.imageUris?.length
-        ? localPost.imageUris
-        : [localPost.imageUrl || localPost.imageUri].filter(Boolean);
+    const thumbnailUrls = localPost.thumbnailUrls?.length
+      ? localPost.thumbnailUrls
+      : [localPost.thumbnailUrl || localPost.imageThumbnailUri].filter(Boolean);
+    const displayUrls = fullImageUrls.map(
+      (fullImageUrl, index) => thumbnailUrls[index] || fullImageUrl
+    );
 
-    return urls
+    return displayUrls
       .map((uri, index) =>
-        getStableImageSource(uri, `post ${localPost.id} detail image ${index + 1}`)
+        getStableImageSource(uri, `post ${localPost.id} detail thumbnail ${index + 1}`)
       )
       .filter((source): source is { uri: string } => !!source);
   }, [
     localPost?.id,
     localPost?.imageThumbnailUri,
-    localPost?.imageUrl,
-    localPost?.imageUri,
-    localPost?.imageUris,
+    fullImageUrls,
     localPost?.mediaType,
+    localPost?.thumbnailUrl,
+    localPost?.thumbnailUrls,
   ]);
 
   if (!localPost) return null;
@@ -92,12 +104,7 @@ export function PostDetailsModal({
   const isExpired =
     !!localPost.expiresAt && (getExpirationTimestamp(localPost.expiresAt) ?? 0) < Date.now();
   const postFieldRows = getPostFieldRows(localPost.postFields);
-  const detailImageSource = getStableImageSource(
-    localPost.mediaType === "video"
-      ? undefined
-      : localPost.imageUrl || localPost.imageUri || localPost.imageThumbnailUri,
-    `post ${localPost.id} detail image`
-  );
+  const detailImageSource = imageSources[0];
   const previewImageSource = getStableImageSource(
     imagePreviewUri,
     `post ${localPost.id} preview image`
@@ -325,8 +332,11 @@ export function PostDetailsModal({
 
               <Pressable
                 style={styles.sendButton}
-                onPress={() => {
+                onPress={async () => {
                   if (replyText.trim()) {
+                    const added = await onAddReply(activePost.id, comment.id, replyText.trim());
+                    if (!added) return;
+
                     const newReply = {
                       id: Date.now().toString(),
                       text: replyText.trim(),
@@ -359,8 +369,6 @@ export function PostDetailsModal({
                       ...activePost,
                       comments: addReplyLocally(activePost.comments ?? []),
                     });
-
-                    onAddReply(activePost.id, comment.id, replyText.trim());
 
                     setReplyText("");
                     setReplyingToCommentId(null);
@@ -576,7 +584,7 @@ export function PostDetailsModal({
                     <Pressable
                       key={`${source.uri}-${index}`}
                       style={[styles.postImageGalleryItem, { height: 300 }]}
-                      onPress={() => setImagePreviewUri(source.uri)}
+                      onPress={() => setImagePreviewUri(fullImageUrls[index] || source.uri)}
                     >
                       <Image
                         source={source}
@@ -603,7 +611,7 @@ export function PostDetailsModal({
                 <Pressable
                   onPress={() => {
                     if (detailImageSource?.uri) {
-                      setImagePreviewUri(detailImageSource.uri);
+                      setImagePreviewUri(fullImageUrls[0] || detailImageSource.uri);
                     }
                   }}
                 >
@@ -646,10 +654,10 @@ export function PostDetailsModal({
               <View style={styles.commentControls}>
                 <Pressable
                   style={styles.sendButton}
-                  onPress={() => {
+                  onPress={async () => {
                     if (commentText.trim()) {
-                      onAddComment(localPost.id, commentText.trim());
-                      setCommentText("");
+                      const added = await onAddComment(localPost.id, commentText.trim());
+                      if (added) setCommentText("");
                     }
                   }}
                 >

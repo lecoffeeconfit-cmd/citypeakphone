@@ -1,6 +1,13 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as FirebaseAuth from "firebase/auth";
+import {
+  getAuth,
+  initializeAuth,
+  type Persistence,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { Platform } from "react-native";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC70KJvVBkc7BYkQxy2hodHAtdJWFNzMZk",
@@ -12,8 +19,19 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+// Metro resolves Firebase's React Native export, which includes this platform-only helper.
+const getReactNativePersistence = (
+  FirebaseAuth as typeof FirebaseAuth & {
+    getReactNativePersistence(storage: typeof AsyncStorage): Persistence;
+  }
+).getReactNativePersistence;
 
-export const auth = getAuth(app);
+export const auth =
+  Platform.OS === "web"
+    ? getAuth(app)
+    : initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage),
+      });
 export const db = getFirestore(app);
 
 export default app;

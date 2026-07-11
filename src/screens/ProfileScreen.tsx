@@ -61,7 +61,7 @@ type ProfileScreenProps = {
   onOpenFollowingUser: (user: FollowUserSummary) => void;
   onEnableNotifications: () => Promise<void>;
   onToggleNotificationPreference: (key: keyof NotificationPreferences) => void;
-  onSaveProfile: (username: string, bio: string, imageUri?: string) => void;
+  onSaveProfile: (username: string, bio: string, imageUri?: string) => Promise<boolean>;
   onUpdatePost: (
     postId: string,
     updates: {
@@ -72,7 +72,7 @@ type ProfileScreenProps = {
       salePrice?: string;
       saleCondition?: string;
     }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   onOpenPost: (post: Post) => void;
   onLogout: () => void;
 onDeleteAccount: () => void;
@@ -115,7 +115,8 @@ onDeleteAccount,
   const [editSaleCondition, setEditSaleCondition] = useState("");
 
   async function pickProfilePhoto() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
       alert("Permission to access photos is required.");
@@ -143,12 +144,19 @@ onDeleteAccount,
 
       setLocalImageUri(asset.uri);
       setIsEditing(true);
+      }
+    } catch (error) {
+      devLog("[profile] photo picker failed", error);
+      alert("Your photo library could not be opened. Please try again.");
     }
   }
 
-  function handleSave() {
-    onSaveProfile(username, bio, localImageUri);
-    setIsEditing(false);
+  async function handleSave() {
+    const saved = await onSaveProfile(username, bio, localImageUri);
+    if (saved) {
+      setLocalImageUri(undefined);
+      setIsEditing(false);
+    }
   }
 
   function startEditingPost(post: Post) {
@@ -169,7 +177,7 @@ onDeleteAccount,
       return;
     }
 
-    await onUpdatePost(editingPost.id, {
+    const saved = await onUpdatePost(editingPost.id, {
       text: editText.trim(),
       tags: editTagsText
         .split(",")
@@ -182,7 +190,7 @@ onDeleteAccount,
       saleCondition: editSaleCondition.trim(),
     });
 
-    setEditingPost(null);
+    if (saved) setEditingPost(null);
   }
 
   function renderProfilePost(post: Post, mode: "owned" | "saved") {

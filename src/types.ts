@@ -22,7 +22,8 @@ export type PostCategory =
   | "Relationships"
   | "Careers & Jobs"
   | "Sports"
-  | "Events";
+  | "Events"
+  | "Pets & Animals";
 
 export const postCategories: PostCategory[] = [
   "Alerts",
@@ -41,6 +42,7 @@ export const postCategories: PostCategory[] = [
   "Careers & Jobs",
   "Sports",
   "Events",
+  "Pets & Animals",
 ];
 
 export type MediaType = "image" | "video";

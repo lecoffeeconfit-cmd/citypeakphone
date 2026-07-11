@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
-Platform,
-Keyboard,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../firebase";
 import { styles } from "../styles";
+import { devLog } from "../utils/media";
 import { countUsage } from "../utils/usageAudit";
 
 type MessagesScreenProps = {
@@ -95,6 +96,7 @@ export function MessagesScreen({
     string | null
   >(null);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const messagesListRef = useRef<FlatList>(null);
@@ -128,8 +130,13 @@ export function MessagesScreen({
         const data = userDoc.data();
         setBlockedUserIds(data?.blockedUserIds ?? []);
       },
-      () => {
-        Alert.alert("Messages unavailable", "Unable to load block settings right now.");
+      (error) => {
+        // Block settings are optional for loading a conversation. If this
+        // profile read is unavailable, keep messaging available and fall back
+        // to no locally-known blocked users instead of showing a misleading
+        // "Messages unavailable" alert over a working thread.
+        devLog("[messages] block settings listener failed", error);
+        setBlockedUserIds([]);
       }
     );
 
@@ -171,7 +178,6 @@ export function MessagesScreen({
     const q = query(
       collection(db, "messages"),
       where("participants", "array-contains", currentUser.uid),
-      orderBy("createdAt", "desc"),
       limit(200)
     );
 
@@ -192,7 +198,8 @@ export function MessagesScreen({
 
         setAllMessages(loadedMessages);
       },
-      () => {
+      (error) => {
+        devLog("[messages] thread listener failed", error);
         Alert.alert("Messages unavailable", "Unable to load messages right now.");
       }
     );
@@ -217,7 +224,12 @@ export function MessagesScreen({
   const messages = selectedUser
     ? allMessages.filter(
         (message) =>
+          message.participants.includes(currentUser.uid) &&
           message.participants.includes(selectedUser.uid) &&
+          ((message.fromUid === currentUser.uid &&
+            message.toUid === selectedUser.uid) ||
+            (message.fromUid === selectedUser.uid &&
+              message.toUid === currentUser.uid)) &&
           !blockedUserIds.includes(selectedUser.uid)
       )
     : [];
@@ -325,7 +337,7 @@ export function MessagesScreen({
   }
 
   async function sendMessage() {
-    if (!selectedUser) return;
+    if (!selectedUser || sendingMessage) return;
 
     if (blockedUserIds.includes(selectedUser.uid)) {
       Alert.alert("User blocked", "Unblock this user before messaging them.");
@@ -339,10 +351,10 @@ export function MessagesScreen({
       return;
     }
 
-    setMessageText("");
+    setSendingMessage(true);
 
     try {
-      await addDoc(collection(db, "messages"), {
+      const messageRef = await addDoc(collection(db, "messages"), {
         fromUid: currentUser.uid,
         toUid: selectedUser.uid,
         fromUsername: username,
@@ -353,12 +365,37 @@ export function MessagesScreen({
         readBy: [currentUser.uid],
         createdAt: serverTimestamp(),
       });
+
+      setMessageText("");
+      setAllMessages((currentMessages) => {
+        if (currentMessages.some((message) => message.id === messageRef.id)) {
+          return currentMessages;
+        }
+
+        return [
+          ...currentMessages,
+          {
+            id: messageRef.id,
+            fromUid: currentUser.uid,
+            toUid: selectedUser.uid,
+            fromUsername: username,
+            toUsername: selectedUser.username,
+            text: cleanedText,
+            participants: [currentUser.uid, selectedUser.uid],
+            reactions: {},
+            readBy: [currentUser.uid],
+            createdAt: new Date(),
+          },
+        ];
+      });
     } catch (error: any) {
       setMessageText(cleanedText);
       Alert.alert(
         "Message failed",
         error.message || "Unable to send this message. Please try again."
       );
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -369,18 +406,27 @@ export function MessagesScreen({
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          await deleteDoc(doc(db, "messages", messageId));
+          try {
+            await deleteDoc(doc(db, "messages", messageId));
+          } catch (error) {
+            devLog("[messages] delete failed", error);
+            Alert.alert("Delete failed", "Unable to delete this message. Please try again.");
+          }
         },
       },
     ]);
   }
 
   async function reactToMessage(messageId: string, emoji: string) {
-    await updateDoc(doc(db, "messages", messageId), {
-      [`reactions.${currentUser.uid}`]: emoji,
-    });
-
-    setActiveReactionMessageId(null);
+    try {
+      await updateDoc(doc(db, "messages", messageId), {
+        [`reactions.${currentUser.uid}`]: emoji,
+      });
+      setActiveReactionMessageId(null);
+    } catch (error) {
+      devLog("[messages] reaction failed", error);
+      Alert.alert("Reaction failed", "Unable to save this reaction. Please try again.");
+    }
   }
 
   async function markConversationRead(userId: string) {
@@ -393,13 +439,18 @@ export function MessagesScreen({
         !(message.readBy ?? []).includes(currentUser.uid)
     );
 
-    await Promise.all(
-      unreadMessages.map((message) =>
-        updateDoc(doc(db, "messages", message.id), {
-          readBy: [...(message.readBy ?? []), currentUser.uid],
-        })
-      )
-    );
+    try {
+      await Promise.all(
+        unreadMessages.map((message) =>
+          updateDoc(doc(db, "messages", message.id), {
+            readBy: [...(message.readBy ?? []), currentUser.uid],
+          })
+        )
+      );
+    } catch (error) {
+      devLog("[messages] mark read failed", error);
+      Alert.alert("Read status unavailable", "Messages loaded, but their read status could not be updated.");
+    }
   }
 
   function openUserProfile(user: AppUser) {
@@ -419,81 +470,135 @@ export function MessagesScreen({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={20}
       >
-        <View style={[styles.screen, { flex: 1, paddingBottom: 0 }]}>
+        <View style={[styles.screen, { flex: 1, paddingBottom: 0 }]}> 
           <View
             style={{
               flexDirection: "row",
-              justifyContent: "space-between",
               alignItems: "center",
+              gap: 8,
+              marginBottom: 8,
             }}
           >
-            <Pressable onPress={() => setSelectedUser(null)}>
-              <Text style={{ color: "#60A5FA", fontWeight: "900" }}>
-                ← Back to messages
+            <Pressable
+              onPress={() => setSelectedUser(null)}
+              hitSlop={8}
+              style={{
+                flexShrink: 1,
+                paddingVertical: 7,
+                paddingHorizontal: 4,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "#60A5FA",
+                  fontWeight: "900",
+                  fontSize: 15,
+                }}
+              >
+                ← Messages
               </Text>
             </Pressable>
 
             <Pressable
-              onPress={
-                selectedUserBlocked
-                  ? unblockSelectedUser
-                  : blockSelectedUser
-              }
+              onPress={() => openUserProfile(selectedUser)}
               style={{
-                backgroundColor: selectedUserBlocked
-                  ? "#166534"
-                  : "#7F1D1D",
-                paddingVertical: 12,
-                paddingHorizontal: 18,
+                flex: 1,
+                minWidth: 0,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 9,
+                backgroundColor: "rgba(15, 23, 42, 0.30)",
+                borderWidth: 1,
+                borderColor: "rgba(148, 163, 184, 0.24)",
                 borderRadius: 14,
-                zIndex: 99999,
-                elevation: 99999,
-                position: "relative",
+                paddingVertical: 7,
+                paddingHorizontal: 9,
               }}
             >
-              <Text style={{ color: "white", fontWeight: "900" }}>
-                {selectedUserBlocked
-                  ? "✅ Unblock"
-                  : "🚫 Block User"}
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 11,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#0891B2",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#07111F",
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                >
+                  {selectedUser.username[0]?.toUpperCase() || "?"}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: "white", fontWeight: "900", fontSize: 15 }}
+                >
+                  @{selectedUser.username}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  style={{ color: "#7DD3FC", fontSize: 12, marginTop: 1 }}
+                >
+                  View profile
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={
+                selectedUserBlocked ? unblockSelectedUser : blockSelectedUser
+              }
+              hitSlop={8}
+              style={{
+                backgroundColor: selectedUserBlocked ? "#166534" : "#7F1D1D",
+                paddingVertical: 9,
+                paddingHorizontal: 11,
+                borderRadius: 12,
+                flexShrink: 0,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{ color: "white", fontWeight: "900", fontSize: 13 }}
+              >
+                {selectedUserBlocked ? "Unblock" : "Block"}
               </Text>
             </Pressable>
           </View>
 
-          <Pressable
-            onPress={() => openUserProfile(selectedUser)}
-            style={styles.messageProfileHeader}
-          >
-            <View style={styles.messageProfileAvatar}>
-              <Text style={styles.messageProfileAvatarText}>
-                {selectedUser.username[0]?.toUpperCase() || "?"}
-              </Text>
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={styles.messageProfileName}>
-                @{selectedUser.username}
-              </Text>
-              <Text numberOfLines={1} style={styles.messageProfileHint}>
-                View profile
-              </Text>
-            </View>
-          </Pressable>
-
           <FlatList
             ref={messagesListRef}
             data={messages}
+            extraData={[selectedUser.uid, activeReactionMessageId]}
             keyExtractor={(item) => item.id}
-            style={{ flex: 1, marginTop: 16, zIndex: 1 }}
-            contentContainerStyle={{ paddingBottom: 12 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: messages.length === 0 ? "center" : "flex-start",
+              paddingTop: 4,
+              paddingBottom: 10,
+            }}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => {
               if (scrollTimeoutRef.current) {
                 clearTimeout(scrollTimeoutRef.current);
               }
 
               scrollTimeoutRef.current = setTimeout(() => {
-                messagesListRef.current?.scrollToEnd({
-                  animated: true,
-                });
+                messagesListRef.current?.scrollToEnd({ animated: true });
               }, 10);
+            }}
+            onLayout={() => {
+              messagesListRef.current?.scrollToEnd({ animated: false });
             }}
             renderItem={({ item }) => {
               const isMine = item.fromUid === currentUser.uid;
@@ -520,7 +625,7 @@ export function MessagesScreen({
                     padding: 12,
                     borderRadius: 16,
                     marginBottom: 10,
-                    maxWidth: "80%",
+                    maxWidth: "82%",
                   }}
                 >
                   <Text style={{ color: "white", fontWeight: "800" }}>
@@ -572,7 +677,13 @@ export function MessagesScreen({
               );
             }}
             ListEmptyComponent={
-              <Text style={{ color: "#94A3B8", marginTop: 20 }}>
+              <Text
+                style={{
+                  color: "#94A3B8",
+                  textAlign: "center",
+                  paddingHorizontal: 20,
+                }}
+              >
                 {selectedUserBlocked
                   ? "This user is blocked. Unblock them to view or send messages."
                   : "No messages yet. Send the first one."}
@@ -583,42 +694,56 @@ export function MessagesScreen({
           <View
             style={{
               flexDirection: "row",
+              alignItems: "flex-end",
               gap: 8,
-              marginTop: 12,
-              marginBottom: keyboardVisible ? 2 : 112,
+              paddingTop: 8,
+              paddingBottom: keyboardVisible ? 2 : 112,
             }}
           >
             <TextInput
               value={messageText}
               onChangeText={setMessageText}
               onSubmitEditing={sendMessage}
+              onFocus={() => {
+                setTimeout(() => {
+                  messagesListRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+              }}
               editable={!selectedUserBlocked}
               returnKeyType="send"
               blurOnSubmit={false}
-              placeholder={selectedUserBlocked ? "User is blocked" : "Type a message..."}
+              placeholder={
+                selectedUserBlocked ? "User is blocked" : "Type a message..."
+              }
               placeholderTextColor="#64748B"
               style={{
                 flex: 1,
+                minHeight: 46,
                 backgroundColor: "rgba(15, 23, 42, 0.30)",
                 color: "white",
                 borderWidth: 1,
                 borderColor: "rgba(148, 163, 184, 0.28)",
                 borderRadius: 14,
-                padding: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 11,
               }}
             />
 
             <Pressable
               onPress={sendMessage}
-              disabled={selectedUserBlocked}
+              disabled={selectedUserBlocked || sendingMessage}
               style={{
+                minHeight: 46,
                 backgroundColor: selectedUserBlocked ? "#334155" : "#2563EB",
-                paddingHorizontal: 16,
+                paddingHorizontal: 15,
+                alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 14,
               }}
             >
-              <Text style={{ color: "white", fontWeight: "900" }}>Send</Text>
+              <Text style={{ color: "white", fontWeight: "900" }}>
+                {sendingMessage ? "Sending..." : "Send"}
+              </Text>
             </Pressable>
           </View>
         </View>

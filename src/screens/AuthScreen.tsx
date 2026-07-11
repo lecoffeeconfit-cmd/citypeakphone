@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
@@ -72,6 +73,25 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
       onAuthSuccess();
     } catch (error: any) {
       alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    const cleanedEmail = email.trim();
+
+    if (!cleanedEmail) {
+      alert("Enter your email address first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await sendPasswordResetEmail(auth, cleanedEmail);
+      alert("Password reset email sent. Check your inbox.");
+    } catch {
+      alert("A password reset email could not be sent. Check the address and try again.");
     } finally {
       setLoading(false);
     }
@@ -155,7 +175,7 @@ await setDoc(doc(db, "users", userCredential.user.uid), {
             </View>
 
             {mode === "login" && (
-              <Pressable style={styles.authForgotButton} disabled={loading}>
+              <Pressable style={styles.authForgotButton} onPress={handlePasswordReset} disabled={loading}>
                 <Text style={styles.authForgotText}>Forgot password?</Text>
               </Pressable>
             )}
