@@ -1,5 +1,6 @@
 export type Tab =
   | "feed"
+  | "city"
   | "search"
   | "post"
   | "messages"

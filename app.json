@@ -70,7 +70,8 @@
           "project": "citypeak",
           "organization": "lecoffeeconfit"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

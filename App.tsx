@@ -53,6 +53,8 @@ import { FeedScreen } from "./src/screens/FeedScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { SearchScreen } from "./src/screens/SearchScreen";
 import { MessagesScreen } from "./src/screens/MessagesScreen";
+import { CityOverviewScreen } from "./src/screens/CityOverviewScreen";
+import { cityForArea } from "./src/data/cityIndex";
 
 import { styles } from "./src/styles";
 import type {
@@ -2959,17 +2961,31 @@ export default Sentry.wrap(function App() {
     setTab("messages");
   }
 
-  if (!firebaseReady) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <CityBackdrop />
-        <View style={styles.screen}>
-          <Text style={styles.logo}>CityPeak</Text>
-          <Text style={styles.subtitle}>Connecting Firebase...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+ if (!firebaseReady) {
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#0F172A",
+      }}
+    >
+      <CityBackdrop />
+
+      <View
+        style={[
+          styles.screen,
+          {
+            flex: 1,
+            backgroundColor: "transparent",
+          },
+        ]}
+      >
+        <Text style={styles.logo}>CityPeak</Text>
+        <Text style={styles.subtitle}>Connecting Firebase...</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
 
   if (!currentUser) {
     return <AuthScreen onAuthSuccess={() => { }} />;
@@ -2992,7 +3008,7 @@ export default Sentry.wrap(function App() {
       <View style={styles.header}>
         <View style={styles.headerTitleArea}>
           <Text style={styles.logo}>CityPeak</Text>
-          <Text style={styles.subtitle}>Local city feeds</Text>
+          <Text style={styles.subtitle}>Explore your city. Connect locally.</Text>
 
           <Text style={styles.signedInText}>
             Signed in as @{username}
@@ -3067,6 +3083,16 @@ export default Sentry.wrap(function App() {
           onSharePost={sharePost}
           userCoordinates={userCoordinates}
           onOpenUserProfile={openUserProfile}
+        />
+      )}
+
+      {tab === "city" && (
+        <CityOverviewScreen
+          cityId={cityForArea(selectedArea)?.id || selectedArea}
+          selectedArea={selectedArea}
+          communityPostCount={visiblePosts.filter((post) => post.location === selectedArea).length}
+          onOpenCommunity={() => setTab("feed")}
+          onChangeCity={() => setTab("search")}
         />
       )}
 

@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { styles } from "../styles";
 import type { Post, Tab } from "../types";
+import { cityIndex } from "../data/cityIndex";
 
 type SearchScreenProps = {
   search: string;
@@ -10,22 +11,6 @@ type SearchScreenProps = {
   setTab: (tab: Tab) => void;
   posts: Post[];
 };
-
-const cityIndex = [
-  { city: "Long Beach", state: "CA" },
-  { city: "Los Angeles", state: "CA" },
-  { city: "Alhambra", state: "CA" },
-  { city: "Irvine", state: "CA" },
-  { city: "Santa Monica", state: "CA" },
-  { city: "San Diego", state: "CA" },
-  { city: "Hollywood", state: "CA" },
-  { city: "Pasadena", state: "CA" },
-  { city: "Anaheim", state: "CA" },
-  { city: "San Francisco", state: "CA" },
-  { city: "New York", state: "NY" },
-  { city: "Chicago", state: "IL" },
-  { city: "Miami", state: "FL" },
-];
 
 function normalizeArea(value: string) {
   const cleaned = value.trim().toLowerCase();

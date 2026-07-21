@@ -14,8 +14,8 @@ export function BottomNav({
   unreadMessagesCount = 0,
 }: BottomNavProps) {
   const items: { key: Tab; label: string; icon: string }[] = [
-    { key: "feed", label: "Feed", icon: "🏠" },
-    { key: "search", label: "Search", icon: "🔍" },
+    { key: "feed", label: "Community", icon: "🏠" },
+    { key: "city", label: "Explore", icon: "🏙️" },
     { key: "post", label: "Post", icon: "➕" },
     { key: "messages", label: "Messages", icon: "💬" },
     { key: "profile", label: "Me", icon: "👤" },
@@ -33,7 +33,7 @@ export function BottomNav({
         borderWidth: 2,
         borderColor: "#22D3EE",
         paddingVertical: 10,
-        paddingHorizontal: 8,
+        paddingHorizontal: 6,
         flexDirection: "row",
         justifyContent: "space-around",
         alignItems: "center",
@@ -49,9 +49,13 @@ export function BottomNav({
         return (
           <Pressable
             key={item.key}
+            accessibilityRole="tab"
+            accessibilityLabel={`${item.label} tab`}
+            accessibilityState={{ selected: isActive }}
             onPress={() => setTab(item.key)}
             style={{
-              minWidth: 58,
+              flex: 1,
+              minWidth: 0,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: isActive ? "#22D3EE" : "transparent",
@@ -82,10 +86,14 @@ export function BottomNav({
               style={{
                 color: isActive ? "#020617" : "#FFFFFF",
                 fontWeight: "900",
-                fontSize: 10,
-                marginTop: 3,
-              }}
-            >
+              fontSize: 10,
+              marginTop: 3,
+              textAlign: "center",
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+          >
               {showUnread
                 ? `${item.label} ${unreadMessagesCount}`
                 : item.label}
