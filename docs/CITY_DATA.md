@@ -11,6 +11,25 @@ models are in `src/city/types.ts`, provider selection is in
   catalogued city coordinates.
 - U.S. Census ACS 2024 5-year: population, median household income, median
   age, and median home value for catalogued Census places.
+- Open-Meteo / CAMS: coordinate-based modeled U.S. AQI, PM2.5, PM10, ozone,
+  and nitrogen-dioxide estimates. This is visibly labeled as a forecast-grid
+  estimate, not an AirNow monitoring-station observation.
+
+## Official multi-city open-data connectors
+
+- **311 aggregates:** Long Beach (Opendatasoft), New York City (Socrata), and
+  Chicago (Socrata). The client requests only seven-day, server-grouped totals
+  by status and category. It never requests individual service records,
+  addresses, photos, or reporter information.
+- **Reported-incident trends:** Long Beach, Chicago, and San Francisco police
+  open-data portals. The client requests only daily citywide aggregate counts
+  for two matched 28-day periods. It shows the latest report date supplied by
+  the portal and never displays locations, individual incidents, rates,
+  convictions, or a safety label.
+- **Official destinations:** Every catalogued city now has a clearly marked
+  official government directory/update link; crime sources also include the
+  FBI Crime Data Explorer as an agency-selection destination. A link is not
+  represented as a verified in-app official record or a live news feed.
 
 The current client fallback uses a 10-second timeout, a 15-minute in-memory
 and device-local cache, and in-flight request deduplication. NWS forecast URLs
@@ -38,11 +57,10 @@ requires an authenticated administrator ID to approve or reject one. Persist
 that review queue and its audit trail in a trusted backend before automating
 checks.
 
-The LBPD incident map and Go Long Beach service-request dataset are deliberately
-linked, not bulk-loaded into the client. They need a server-side connector that
-validates, aggregates, deduplicates, and caches data before CityPeak displays
-native metrics. This prevents the app from implying reliable crime comparisons
-or live 311 counts before coverage and reporting periods are verified.
+The Long Beach connectors only load grouped totals: seven-day 311 status and
+category counts, plus daily reported-incident counts for two matched periods.
+They do not load individual reports. The same privacy-preserving pattern is
+used for the Chicago, New York City, and San Francisco source adapters.
 
 ## Reusable local normalization
 
@@ -69,8 +87,10 @@ FBI_API_KEY=
 That endpoint should cache normalized data by `cityId` and source metadata
 (ETag, Last-Modified, content hash, last checked, source-modified time), honor
 provider rate limits, and return the `CityOverviewData` shape. Configure it
-before enabling AirNow, FBI, Open311, ArcGIS, Socrata, official-news, or
-officials connectors in the registry.
+before enabling AirNow, FBI API statistics, official-news ingestion, or
+automated-officials connectors in the registry. The current public no-key
+connector is a bounded client fallback; it should move behind the consolidated
+endpoint before a nationwide production rollout.
 
 ## Operations
 
@@ -86,8 +106,8 @@ officials connectors in the registry.
 
 ## Local connector contract
 
-Implement Open311, ArcGIS, Socrata, FBI, local structured APIs, and manual
-verified datasets as `CityDataConnector<T>` adapters. Every service request
+Implement Open311, ArcGIS, additional Socrata, FBI, local structured APIs, and
+manual verified datasets as `CityDataConnector<T>` adapters. Every service request
 must carry `official_311`, `community_report`, or `status_unknown`; community
 reports must never appear as government records. Crime comparisons must use
 only compatible full reporting periods, show coverage and agency, and never

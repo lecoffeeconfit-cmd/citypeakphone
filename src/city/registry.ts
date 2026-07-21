@@ -6,6 +6,7 @@ import type { CityEnhancedData, CitySourceConfiguration, GovernmentOfficial, Off
  */
 export const nationwideSourceConfiguration: CitySourceConfiguration = {
   weatherProvider: "nws",
+  airQualityProvider: "open-meteo-cams-air-quality",
   demographicsProvider: "census-acs",
   emergencyProviders: ["nws"],
 };
@@ -51,6 +52,43 @@ const longBeachEnhancedData: CityEnhancedData = {
   lastVerifiedAt: longBeachVerifiedAt,
 };
 
+const nationwideCrimeSource: OfficialSourceLink = {
+  id: "fbi-crime-data-explorer",
+  label: "FBI Crime Data Explorer",
+  description: "Official FBI agency-level crime data. Select the correct law-enforcement agency and review its coverage before comparing periods.",
+  url: "https://cde.ucr.cjis.gov/",
+  classification: "official_dashboard",
+  agencyType: "police",
+};
+
+function citySourceLinks(cityId: string, cityName: string, officialUrl: string, service?: OfficialSourceLink): CityEnhancedData {
+  return {
+    officials: [],
+    officialLinks: [
+      { id: `${cityId}-directory`, label: `${cityName} government directory`, description: "Official city government departments, elected officials, and public-contact information.", url: officialUrl, classification: "official_directory", agencyType: "city" },
+      { id: `${cityId}-updates`, label: `${cityName} official updates`, description: "Official city announcements, meetings, notices, and services.", url: officialUrl, classification: "official_update", agencyType: "city" },
+      ...(service ? [service] : []),
+    ],
+    crimeSource: nationwideCrimeSource,
+    serviceRequestSource: service,
+  };
+}
+
+const citywideOfficialSourceConfigurations: Record<string, CitySourceConfiguration> = {
+  "us-ca-los-angeles": { enhancedData: citySourceLinks("us-ca-los-angeles", "City of Los Angeles", "https://lacity.gov/", { id: "la-311", label: "Los Angeles 311", description: "Official City of Los Angeles non-emergency reporting and service information.", url: "https://lacity.gov/311", classification: "official_service", agencyType: "public_works" }) },
+  "us-ca-alhambra": { enhancedData: citySourceLinks("us-ca-alhambra", "City of Alhambra", "https://www.cityofalhambra.org/") },
+  "us-ca-irvine": { enhancedData: citySourceLinks("us-ca-irvine", "City of Irvine", "https://www.cityofirvine.org/") },
+  "us-ca-santa-monica": { enhancedData: citySourceLinks("us-ca-santa-monica", "City of Santa Monica", "https://www.santamonica.gov/") },
+  "us-ca-san-diego": { enhancedData: citySourceLinks("us-ca-san-diego", "City of San Diego", "https://www.sandiego.gov/") },
+  "us-ca-hollywood": { enhancedData: citySourceLinks("us-ca-hollywood", "City of Los Angeles (Hollywood neighborhood)", "https://lacity.gov/", { id: "hollywood-la-311", label: "Los Angeles 311", description: "Hollywood is a Los Angeles neighborhood; use the City of Los Angeles official non-emergency service.", url: "https://lacity.gov/311", classification: "official_service", agencyType: "public_works" }) },
+  "us-ca-pasadena": { enhancedData: citySourceLinks("us-ca-pasadena", "City of Pasadena", "https://www.cityofpasadena.net/") },
+  "us-ca-anaheim": { enhancedData: citySourceLinks("us-ca-anaheim", "City of Anaheim", "https://www.anaheim.net/") },
+  "us-ca-san-francisco": { enhancedData: citySourceLinks("us-ca-san-francisco", "City and County of San Francisco", "https://www.sf.gov/") },
+  "us-ny-new-york": { serviceRequestProvider: "nyc-open-data-311", enhancedData: citySourceLinks("us-ny-new-york", "City of New York", "https://www.nyc.gov/", { id: "nyc-311", label: "NYC 311", description: "Official New York City non-emergency reporting, service status, and request information.", url: "https://portal.311.nyc.gov/", classification: "official_service", agencyType: "public_works" }) },
+  "us-il-chicago": { serviceRequestProvider: "chicago-open-data-311", enhancedData: citySourceLinks("us-il-chicago", "City of Chicago", "https://www.chicago.gov/", { id: "chicago-311", label: "Chicago 311", description: "Official City of Chicago non-emergency reporting and service-request information.", url: "https://311.chicago.gov/", classification: "official_service", agencyType: "public_works" }) },
+  "us-fl-miami": { enhancedData: citySourceLinks("us-fl-miami", "City of Miami", "https://www.miami.gov/") },
+};
+
 export const enhancedCitySourceConfigurations: Record<string, CitySourceConfiguration> = {
   "us-ca-long-beach": {
     crimeProvider: "long-beach-police-dashboard",
@@ -59,6 +97,7 @@ export const enhancedCitySourceConfigurations: Record<string, CitySourceConfigur
     newsProviders: ["long-beach-city", "long-beach-police", "long-beach-fire"],
     enhancedData: longBeachEnhancedData,
   },
+  ...citywideOfficialSourceConfigurations,
 };
 
 export function sourceConfigurationForCity(cityId: string): CitySourceConfiguration {

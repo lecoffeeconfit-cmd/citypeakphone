@@ -1,4 +1,4 @@
-import { dedupeServiceRequests, normalizeServiceRequest, normalizeServiceStatus } from "../serviceRequests";
+import { dedupeServiceRequests, normalizeServiceRequest, normalizeServiceStatus, summarizeServiceRequestAggregates } from "../serviceRequests";
 
 const mapping = {
   providerId: "open311-test",
@@ -31,5 +31,18 @@ describe("service request normalization", () => {
     const first = normalizeServiceRequest({ service_request_id: "same", service_name: "Graffiti", status: "New", updated_at: "2026-01-01T00:00:00Z" }, mapping)!;
     const latest = { ...first, status: "closed" as const, updatedAt: "2026-01-02T00:00:00.000Z" };
     expect(dedupeServiceRequests([first, latest])).toEqual([latest]);
+  });
+
+  it("summarizes only grouped records without retaining individual request data", () => {
+    const summary = summarizeServiceRequestAggregates([
+      { status: "Open", category: "Pothole in Street Complaint", count: 10 },
+      { status: "In Progress", category: "Pothole in Street Complaint", count: 4 },
+      { status: "Closed", category: "Graffiti", count: 9 },
+      { status: "Unknown", category: "Ignored", count: -1 },
+    ]);
+    expect(summary).toEqual({ totalCount: 23, openCount: 10, inProgressCount: 4, closedCount: 9, topCategories: [
+      { label: "Pothole in Street Complaint", count: 14 },
+      { label: "Graffiti", count: 9 },
+    ] });
   });
 });

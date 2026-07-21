@@ -8,6 +8,41 @@ export const crimeComparisonRules = {
   minimumCoveragePercent: 80,
 } as const;
 
+/** Official police/open-data sources that can return citywide aggregate totals. */
+export type PublicCrimeSource = {
+  cityId: string;
+  providerId: string;
+  name: string;
+  host: string;
+  sourceUrl: string;
+  endpoint: string;
+  kind: "socrata" | "opendatasoft";
+  dateField: string;
+  expectedUpdateFrequency: string;
+};
+
+export const publicCrimeSources: Record<string, PublicCrimeSource> = {
+  "us-ca-long-beach": {
+    cityId: "us-ca-long-beach", providerId: "long-beach-police-open-data", name: "Long Beach Police reported incidents", host: "data.longbeach.gov",
+    sourceUrl: "https://data.longbeach.gov/explore/dataset/lbpd-criminal-incident-data/", endpoint: "https://data.longbeach.gov/api/explore/v2.1/catalog/datasets/lbpd-criminal-incident-data/records",
+    kind: "opendatasoft", dateField: "date_reported", expectedUpdateFrequency: "City open-data portal",
+  },
+  "us-il-chicago": {
+    cityId: "us-il-chicago", providerId: "chicago-police-open-data", name: "Chicago Police reported crimes", host: "data.cityofchicago.org",
+    sourceUrl: "https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-Present/ijzp-q8t2", endpoint: "https://data.cityofchicago.org/resource/ijzp-q8t2.json",
+    kind: "socrata", dateField: "date", expectedUpdateFrequency: "City open-data portal",
+  },
+  "us-ca-san-francisco": {
+    cityId: "us-ca-san-francisco", providerId: "san-francisco-police-open-data", name: "San Francisco Police incident reports", host: "data.sfgov.org",
+    sourceUrl: "https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783", endpoint: "https://data.sfgov.org/resource/wg3w-h783.json",
+    kind: "socrata", dateField: "incident_date", expectedUpdateFrequency: "City open-data portal",
+  },
+};
+
+export function publicCrimeSourceForCity(cityId: string) {
+  return publicCrimeSources[cityId];
+}
+
 export type CrimeComparisonLabel = "Above comparison rate" | "Near comparison rate" | "Below comparison rate" | "Insufficient recent data" | "Limited reporting coverage";
 export type CrimeTrendLabel = "Increasing" | "Decreasing" | "Stable" | "Insufficient recent data";
 

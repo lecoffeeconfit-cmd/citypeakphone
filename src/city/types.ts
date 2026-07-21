@@ -53,6 +53,21 @@ export type Demographics = {
   source: SourceMeta;
 };
 
+export type AirQualityCategory = "Good" | "Moderate" | "Unhealthy for sensitive groups" | "Unhealthy" | "Very unhealthy" | "Hazardous";
+
+export type AirQualitySummary = {
+  /** A modeled U.S. AQI for the provider's nearest forecast grid cell, not a monitoring-station observation. */
+  usAqi: number;
+  category: AirQualityCategory;
+  pm25?: number;
+  pm10?: number;
+  ozone?: number;
+  nitrogenDioxide?: number;
+  observedAt?: string;
+  geographicScope: "air_quality_model_grid" | "air_quality_reporting_area" | "unknown";
+  source: SourceMeta;
+};
+
 export type EmergencyAlert = {
   id: string;
   event: string;
@@ -75,7 +90,10 @@ export type CityDataConnector<T> = {
 export type CityOverviewData = {
   city: City;
   weather?: WeatherSummary;
+  airQuality?: AirQualitySummary;
   demographics?: Demographics;
+  crimeTrend?: CrimeTrendSummary;
+  serviceRequests?: ServiceRequestSummary;
   alerts: EmergencyAlert[];
   statuses: DataSourceStatus[];
   enhanced?: CityEnhancedData;
@@ -117,6 +135,20 @@ export type CrimeStatistic = {
   sourceUrl: string;
   sourcePublishedAt?: string;
   fetchedAt: string;
+};
+
+/** Aggregate reported-incident totals only; not a crime rate, safety score, or conviction count. */
+export type CrimeTrendSummary = {
+  currentCount: number;
+  priorCount: number;
+  percentageChange?: number;
+  periodStart: string;
+  periodEnd: string;
+  priorPeriodStart: string;
+  priorPeriodEnd: string;
+  reportingThrough: string;
+  geographicScope: "police_jurisdiction" | "city" | "unknown";
+  source: SourceMeta;
 };
 
 export type GovernmentOfficial = {
@@ -173,6 +205,27 @@ export type CityServiceRequest = {
   closedAt?: string;
   sourceUrl?: string;
   fetchedAt: string;
+};
+
+export type ServiceRequestCategoryCount = {
+  label: string;
+  count: number;
+};
+
+/**
+ * Aggregated public-service-request totals. CityPeak intentionally does not
+ * cache or render individual reports, addresses, media, or reporter details.
+ */
+export type ServiceRequestSummary = {
+  totalCount: number;
+  openCount: number;
+  inProgressCount: number;
+  closedCount: number;
+  periodStart: string;
+  periodEnd: string;
+  topCategories: ServiceRequestCategoryCount[];
+  geographicScope: "city" | "unknown";
+  source: SourceMeta;
 };
 
 export type CityNewsItem = {
